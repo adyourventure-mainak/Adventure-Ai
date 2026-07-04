@@ -8,6 +8,8 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
+  // native = local dev; rhel-openssl-3.0.x = Vercel serverless; debian = worker Docker
+  binaryTargets   = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
