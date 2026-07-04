@@ -13,18 +13,35 @@
   `binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]`
   so Prisma engines exist on Vercel (rhel) and in the worker Docker image (debian).
 
-## Worker → Railway (manual steps)
+## Worker → Railway (done — 2026-07-04)
 
-1. `npm i -g @railway/cli && railway login` (or set `RAILWAY_TOKEN`).
-2. `railway init` in the repo root → new project "adventure-ai-worker".
-3. Add the **Redis** plugin (managed Redis) — it injects `REDIS_URL`.
-4. Create a service from this repo: root `/`, Dockerfile `apps/worker/Dockerfile`.
-5. Service variables: `DATABASE_URL`, `DIRECT_URL`, `OPENAI_API_KEY`,
-   `OPENAI_MODEL`, `GITHUB_TOKEN`, `VERCEL_TOKEN`, `VERCEL_TEAM_ID`
-   (copy values from `apps/web/.env.local`; `REDIS_URL` comes from the plugin).
-6. Deploy. Boot log should say: `[worker] booted. queues: …` and
-   `processors: provisioning, orchestrator, engineer, social, email-outreach,
-   support, research, finance, ads`.
+- Project **adventure-ai-worker** (`d0a11cf1-a0f7-40c5-9fa5-1fd4964c4eb5`),
+  production environment (`ae5dec6c-…`), account `adyourventure@gmail.com`.
+- Two services:
+  - **redis** — `redis:7-alpine`, `--requirepass <pw> --appendonly yes`,
+    reached over private networking at `redis.railway.internal:6379`.
+  - **worker** — built from `apps/worker/Dockerfile` (config in root
+    `railway.json`), deployed via `railway up` (no GitHub repo yet, so code is
+    uploaded from local). 8 env vars set: DATABASE_URL, DIRECT_URL,
+    OPENAI_API_KEY, OPENAI_MODEL, GITHUB_TOKEN, VERCEL_TOKEN, VERCEL_TEAM_ID,
+    REDIS_URL.
+- Boot log confirmed clean: `[worker] booted … processors: provisioning,
+  orchestrator, engineer, social, email-outreach, support, research, finance,
+  ads. scheduler: 60s tick.`
+- **Gotcha fixed:** Railway private networking is IPv6-only; ioredis needed
+  `family: 0` (`apps/worker/src/queues.ts`) or it fails with
+  `ENOTFOUND redis.railway.internal`.
+
+### Redeploying the worker later
+
+```bash
+export RAILWAY_API_TOKEN=<account token>
+railway link -p d0a11cf1-a0f7-40c5-9fa5-1fd4964c4eb5 -e production -s worker
+railway up --detach --service worker
+```
+
+Or connect the GitHub repo (once created) in the service's Settings → Source
+for push-to-deploy, same as recommended for Vercel.
 
 ## Razorpay webhook (manual — live account change)
 
