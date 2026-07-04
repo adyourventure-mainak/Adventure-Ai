@@ -1,0 +1,481 @@
+// Adventure AI — multi-tenant schema
+// Conventions:
+//  - Every tenant-scoped table carries companyId (enforced by Prisma middleware + Supabase RLS).
+//  - All money is stored in paise (Int). ₹3,999 = 399900.
+//  - ActivityLog is append-only (no update/delete path in app code; RLS denies UPDATE/DELETE).
+//  - pgvector via Unsupported("vector") on MemoryEntry.embedding.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL") // Supabase pooler (pgbouncer) — serverless runtime
+  directUrl  = env("DIRECT_URL")   // direct connection — migrations only
+  extensions = [vector]
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum PlanTier {
+  FREE
+  PRO
+  SCALE
+}
+
+enum SubscriptionStatus {
+  CREATED
+  AUTHENTICATED
+  ACTIVE
+  HALTED // payment failures — agents paused
+  CANCELLED
+  EXPIRED
+}
+
+enum AutonomyLevel {
+  FULL_AUTO
+  APPROVE_OUTBOUND // default — all outbound email/social/ads need approval
+  APPROVE_EVERYTHING
+}
+
+enum CompanyStatus {
+  DRAFT        // idea generated, free tier
+  PROVISIONING // upgrade paid, resources being created
+  ACTIVE       // agents running
+  PAUSED       // user-paused or subscription halted
+  LAPSED       // cancelled — 90-day data retention window
+}
+
+enum AgentType {
+  ORCHESTRATOR
+  PLANNER
+  ENGINEER
+  SOCIAL
+  EMAIL_OUTREACH
+  SUPPORT
+  ADS
+  FINANCE
+  RESEARCH
+}
+
+enum TaskStatus {
+  PENDING
+  QUEUED
+  RUNNING
+  AWAITING_APPROVAL
+  COMPLETED
+  FAILED    // after 2 retries — credits auto-refunded if on-demand
+  CANCELLED
+}
+
+enum TaskSource {
+  CYCLE     // included nightly/daily cycle
+  ON_DEMAND // user-requested, consumes credits
+  AGENT     // dispatched by orchestrator
+  SYSTEM
+}
+
+enum ApprovalKind {
+  OUTBOUND_EMAIL
+  SOCIAL_POST
+  AD_BUDGET_CHANGE
+  CODE_DEPLOY
+  OTHER
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EDITED_AND_APPROVED
+  EXPIRED
+}
+
+enum CreditEntryType {
+  GRANT      // plan inclusion, promo, admin grant
+  PURCHASE   // credit pack via Razorpay Order
+  CONSUME    // on-demand task
+  REFUND     // failed task auto-refund
+  ADJUSTMENT // admin correction
+}
+
+enum IntegrationProvider {
+  GITHUB
+  VERCEL
+  RESEND
+  BUFFER
+  TWITTER
+  LINKEDIN
+  INSTAGRAM
+  GOOGLE_ADS
+  META_ADS
+  RAZORPAY_ROUTE
+  SUPPORT_INBOX
+}
+
+enum IntegrationStatus {
+  PENDING
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+enum ProvisionResource {
+  GITHUB_REPO
+  VERCEL_PROJECT
+  DB_SCHEMA
+  EMAIL_IDENTITY
+  RAZORPAY_LINKED_ACCOUNT
+}
+
+enum ProvisionStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  FAILED
+}
+
+// ─────────────────────────── Identity & tenancy ───────────────────────────
+
+/// Mirrors Supabase auth.users (id = auth uid). Created via auth webhook/trigger.
+model User {
+  id        String   @id @db.Uuid
+  email     String   @unique
+  name      String?
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  companies Company[]
+
+  @@map("users")
+}
+
+/// The tenant. One user can own multiple companies (each billed separately).
+model Company {
+  id            String        @id @default(cuid())
+  ownerId       String        @db.Uuid
+  owner         User          @relation(fields: [ownerId], references: [id])
+  name          String
+  slug          String        @unique
+  status        CompanyStatus @default(DRAFT)
+  planTier      PlanTier      @default(FREE)
+  autonomyLevel AutonomyLevel @default(APPROVE_OUTBOUND)
+
+  // Generated at onboarding
+  ideaSummary String? @db.Text
+  positioning String? @db.Text
+  brandVoice  String? @db.Text
+
+  // Caps & limits (admin/user configurable)
+  llmDailyTokenCap  Int @default(2000000)
+  llmDailyCostCapP  Int @default(50000)   // paise/day on LLM spend
+  adBudgetCapP      Int @default(0)       // hard cap, paise/month; 0 = ads disabled
+  taskCyclesPerDay  Int @default(0)       // 0 free, 1 pro, 3 scale
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  lapsedAt  DateTime? // start of 90-day retention window
+
+  subscription   Subscription?
+  agentStates    AgentState[]
+  tasks          Task[]
+  approvals      Approval[]
+  activityLogs   ActivityLog[]
+  memoryEntries  MemoryEntry[]
+  creditEntries  CreditLedgerEntry[]
+  integrations   Integration[]
+  provisions     ProvisionRecord[]
+  landingPage    LandingPage?
+  dailyBriefs    DailyBrief[]
+  kpiSnapshots   KpiSnapshot[]
+  transfers      TransferRecord[]
+  llmUsageDays   LlmUsageDay[]
+  dataExports    DataExport[]
+  plan           CompanyPlan?
+
+  @@index([ownerId])
+  @@map("companies")
+}
+
+// ─────────────────────────── Billing ───────────────────────────
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  companyId              String             @unique
+  company                Company            @relation(fields: [companyId], references: [id])
+  planTier               PlanTier
+  razorpayPlanId         String
+  razorpaySubscriptionId String             @unique
+  status                 SubscriptionStatus @default(CREATED)
+  currentPeriodEnd       DateTime?
+  cancelledAt            DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+/// Append-only credit ledger. Balance = SUM(delta) per company.
+model CreditLedgerEntry {
+  id              String          @id @default(cuid())
+  companyId       String
+  company         Company         @relation(fields: [companyId], references: [id])
+  type            CreditEntryType
+  delta           Int             // +grant/purchase/refund, -consume
+  balanceAfter    Int
+  reason          String
+  taskId          String?         // set for CONSUME/REFUND
+  razorpayOrderId String?         // set for PURCHASE
+  createdAt       DateTime        @default(now())
+
+  @@index([companyId, createdAt])
+  @@map("credit_ledger")
+}
+
+/// Razorpay Route transfer records — revenue-share transparency.
+model TransferRecord {
+  id                 String   @id @default(cuid())
+  companyId          String
+  company            Company  @relation(fields: [companyId], references: [id])
+  razorpayPaymentId  String
+  razorpayTransferId String?  @unique
+  grossAmountP       Int      // full payment captured on user's business
+  platformFeeP       Int      // 20%
+  settledAmountP     Int      // 80% to linked account
+  status             String   // created | processed | reversed | failed
+  createdAt          DateTime @default(now())
+  processedAt        DateTime?
+
+  @@index([companyId, createdAt])
+  @@map("transfer_records")
+}
+
+/// Razorpay webhook idempotency — event id is the PK; insert-or-skip.
+model WebhookEvent {
+  id          String    @id // x-razorpay-event-id
+  type        String
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  error       String?
+
+  @@map("webhook_events")
+}
+
+// ─────────────────────────── Agents & tasks ───────────────────────────
+
+/// Per-company, per-agent switch + config (tone, schedules, model override).
+model AgentState {
+  id        String    @id @default(cuid())
+  companyId String
+  company   Company   @relation(fields: [companyId], references: [id])
+  agent     AgentType
+  enabled   Boolean   @default(true)
+  config    Json      @default("{}")
+  pausedAt  DateTime?
+  updatedAt DateTime  @updatedAt
+
+  @@unique([companyId, agent])
+  @@map("agent_states")
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  companyId    String
+  company      Company    @relation(fields: [companyId], references: [id])
+  agent        AgentType
+  type         String     // e.g. "daily_brief", "landing_page_edit", "cold_email_batch"
+  title        String
+  source       TaskSource
+  status       TaskStatus @default(PENDING)
+  payload      Json       @default("{}")
+  result       Json?
+  error        String?
+  attempts     Int        @default(0)
+  maxAttempts  Int        @default(3) // 1 run + 2 retries
+  creditsCost  Int        @default(0)
+  parentTaskId String?    // orchestrator dispatch chain
+  scheduledFor DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  approval Approval?
+
+  @@index([companyId, status])
+  @@index([companyId, createdAt])
+  @@map("tasks")
+}
+
+model Approval {
+  id         String         @id @default(cuid())
+  companyId  String
+  company    Company        @relation(fields: [companyId], references: [id])
+  taskId     String         @unique
+  task       Task           @relation(fields: [taskId], references: [id])
+  kind       ApprovalKind
+  status     ApprovalStatus @default(PENDING)
+  draft      Json           // the content awaiting approval
+  editedDraft Json?         // user-modified version, ships instead of draft
+  decidedAt  DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([companyId, status])
+  @@map("approvals")
+}
+
+/// Append-only. Who/what/when/tokens/cost/result for every agent action.
+model ActivityLog {
+  id           String    @id @default(cuid())
+  companyId    String
+  company      Company   @relation(fields: [companyId], references: [id])
+  agent        AgentType
+  taskId       String?
+  action       String    // short verb phrase for the feed
+  detail       Json      @default("{}")
+  isPublic     Boolean   @default(true) // shown on /live read-only feed
+  inputTokens  Int       @default(0)
+  outputTokens Int       @default(0)
+  llmCostP     Int       @default(0) // paise
+  createdAt    DateTime  @default(now())
+
+  @@index([companyId, createdAt(sort: Desc)])
+  @@map("activity_log")
+}
+
+/// Shared per-company memory with pgvector retrieval.
+model MemoryEntry {
+  id        String                       @id @default(cuid())
+  companyId String
+  company   Company                      @relation(fields: [companyId], references: [id])
+  agent     AgentType
+  kind      String                       // "decision" | "learning" | "customer_fact" | "research" | ...
+  content   String                       @db.Text
+  embedding Unsupported("vector(1536)")?
+  taskId    String?
+  createdAt DateTime                     @default(now())
+
+  @@index([companyId, createdAt])
+  @@map("memory_entries")
+}
+
+/// Daily LLM usage rollup per company — cheap cap enforcement + admin cost view.
+model LlmUsageDay {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id])
+  date         DateTime @db.Date
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  costP        Int      @default(0)
+
+  @@unique([companyId, date])
+  @@map("llm_usage_days")
+}
+
+// ─────────────────────────── Company artifacts ───────────────────────────
+
+/// Roadmap / OKRs / 30-day plan maintained by Planner agent.
+model CompanyPlan {
+  id            String   @id @default(cuid())
+  companyId     String   @unique
+  company       Company  @relation(fields: [companyId], references: [id])
+  thirtyDayPlan Json     // generated at onboarding
+  roadmap       Json     @default("[]")
+  okrs          Json     @default("[]")
+  updatedAt     DateTime @updatedAt
+
+  @@map("company_plans")
+}
+
+model LandingPage {
+  id          String   @id @default(cuid())
+  companyId   String   @unique
+  company     Company  @relation(fields: [companyId], references: [id])
+  copy        Json     // hero, features, cta, faq — structured copy blocks
+  themeConfig Json     @default("{}")
+  deployedUrl String?
+  version     Int      @default(1)
+  updatedAt   DateTime @updatedAt
+
+  @@map("landing_pages")
+}
+
+model DailyBrief {
+  id        String   @id @default(cuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  date      DateTime @db.Date
+  content   String   @db.Text // markdown from CEO agent
+  createdAt DateTime @default(now())
+
+  @@unique([companyId, date])
+  @@map("daily_briefs")
+}
+
+model KpiSnapshot {
+  id             String   @id @default(cuid())
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+  date           DateTime @db.Date
+  revenueP       Int      @default(0)
+  visitors       Int      @default(0)
+  emailsSent     Int      @default(0)
+  adSpendP       Int      @default(0)
+  tasksCompleted Int      @default(0)
+  mrrP           Int      @default(0)
+
+  @@unique([companyId, date])
+  @@map("kpi_snapshots")
+}
+
+// ─────────────────────────── Provisioning & integrations ───────────────────────────
+
+model ProvisionRecord {
+  id         String            @id @default(cuid())
+  companyId  String
+  company    Company           @relation(fields: [companyId], references: [id])
+  resource   ProvisionResource
+  status     ProvisionStatus   @default(PENDING)
+  externalId String?           // repo full name, vercel project id, linked account id...
+  meta       Json              @default("{}")
+  error      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@unique([companyId, resource])
+  @@map("provision_records")
+}
+
+/// OAuth tokens / API keys per company. Secrets encrypted at rest (AES-256-GCM,
+/// key in env) — never returned by the API.
+model Integration {
+  id            String              @id @default(cuid())
+  companyId     String
+  company       Company             @relation(fields: [companyId], references: [id])
+  provider      IntegrationProvider
+  status        IntegrationStatus   @default(PENDING)
+  encryptedCred String?             @db.Text
+  meta          Json                @default("{}")
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([companyId, provider])
+  @@map("integrations")
+}
+
+model DataExport {
+  id          String    @id @default(cuid())
+  companyId   String
+  company     Company   @relation(fields: [companyId], references: [id])
+  requestedAt DateTime  @default(now())
+  completedAt DateTime?
+  url         String?   // signed Supabase storage URL (JSON + SQL dump)
+  expiresAt   DateTime?
+
+  @@map("data_exports")
+}
