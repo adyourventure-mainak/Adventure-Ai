@@ -20,6 +20,10 @@ export type AgentQueueName = (typeof AGENT_QUEUES)[number];
 export function redisConnection() {
   return new IORedis(process.env.REDIS_URL ?? "redis://localhost:6379", {
     maxRetriesPerRequest: null,
+    // Railway private networking is IPv6-only; family:0 lets DNS resolve both
+    // A and AAAA records so `*.railway.internal` hostnames work. Harmless on
+    // IPv4-only hosts (localhost dev).
+    family: 0,
   });
 }
 
