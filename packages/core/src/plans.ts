@@ -2,7 +2,16 @@
 // All amounts in paise. RBI e-mandate rule: recurring mandates above
 // ₹15,000 need extra authentication — keep plan prices below 1_500_000 paise.
 
-export type PlanTier = "FREE" | "PRO" | "SCALE";
+export type PlanTier = "FREE" | "TRIAL" | "PRO" | "SCALE";
+
+// Limited-time launch offer: one-time ₹10 payment unlocks Pro-level access
+// until this date (IST end of day). Purchase and access both end here.
+export const TRIAL_ENDS_AT = new Date("2026-07-15T23:59:59.999+05:30");
+export const TRIAL_PRICE_PAISE = 1000;
+
+export function trialAvailable(now: Date = new Date()): boolean {
+  return now < TRIAL_ENDS_AT;
+}
 
 export interface PlanDef {
   tier: PlanTier;
@@ -25,6 +34,19 @@ export const PLANS: Record<PlanTier, PlanDef> = {
       "AI idea generation & validation",
       "30-day plan",
       "Landing page preview",
+    ],
+  },
+  TRIAL: {
+    tier: "TRIAL",
+    name: "Trial",
+    pricePaise: TRIAL_PRICE_PAISE,
+    taskCyclesPerDay: 1,
+    razorpayPlanEnv: null, // one-time order (notes.type = "trial"), not a subscription
+    features: [
+      "Everything in Pro",
+      "One-time ₹10 — no mandate",
+      "Valid till 15 July",
+      "1 nightly task cycle / day",
     ],
   },
   PRO: {

@@ -23,6 +23,7 @@ datasource db {
 
 enum PlanTier {
   FREE
+  TRIAL
   PRO
   SCALE
 }

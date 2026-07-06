@@ -1,5 +1,6 @@
 import type { Queue } from "bullmq";
 import { prisma } from "@adventure/db";
+import { TRIAL_ENDS_AT } from "@adventure/core";
 import type { AgentQueueName } from "./queues";
 
 /**
@@ -16,6 +17,31 @@ import type { AgentQueueName } from "./queues";
 export function startScheduler(queues: Record<AgentQueueName, Queue>) {
   const tick = async () => {
     try {
+      // 0. Lapse expired ₹10 trials (offer ends TRIAL_ENDS_AT). LAPSED starts
+      // the same 90-day retention window as a cancelled subscription.
+      if (new Date() >= TRIAL_ENDS_AT) {
+        const expired = await prisma.company.findMany({
+          where: { planTier: "TRIAL", status: { in: ["PROVISIONING", "ACTIVE", "PAUSED"] } },
+          select: { id: true },
+        });
+        for (const c of expired) {
+          await prisma.$transaction([
+            prisma.company.update({
+              where: { id: c.id },
+              data: { status: "LAPSED", taskCyclesPerDay: 0, lapsedAt: new Date() },
+            }),
+            prisma.activityLog.create({
+              data: {
+                companyId: c.id,
+                agent: "FINANCE",
+                action: "Trial ended (15 July) — upgrade to Pro to keep your agents running",
+                isPublic: false,
+              },
+            }),
+          ]);
+        }
+      }
+
       // 1. Provisioning
       const provisioning = await prisma.company.findMany({
         where: { status: "PROVISIONING" },

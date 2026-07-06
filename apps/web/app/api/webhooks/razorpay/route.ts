@@ -162,6 +162,31 @@ async function handleEvent(event: {
         return;
       }
 
+      // Limited-time ₹10 trial: one-time payment unlocks Pro-level access
+      // until TRIAL_ENDS_AT (the worker scheduler lapses expired trials).
+      if (payment.notes?.type === "trial" && payment.notes.companyId) {
+        const plan = PLANS.TRIAL;
+        await prisma.$transaction([
+          prisma.company.update({
+            where: { id: payment.notes.companyId },
+            data: {
+              planTier: "TRIAL",
+              taskCyclesPerDay: plan.taskCyclesPerDay,
+              status: "PROVISIONING",
+              lapsedAt: null,
+            },
+          }),
+          prisma.activityLog.create({
+            data: {
+              companyId: payment.notes.companyId,
+              agent: "FINANCE",
+              action: "Trial payment received — Trial plan active till 15 July",
+            },
+          }),
+        ]);
+        return;
+      }
+
       // Business revenue (a company's customer paying it through the
       // platform): Razorpay Route splits it 80/20 to the company's linked
       // account. Requires the RAZORPAY_ROUTE integration (meta.accountId).

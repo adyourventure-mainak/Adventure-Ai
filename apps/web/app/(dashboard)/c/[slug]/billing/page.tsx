@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PLANS, CREDIT_PACKS, formatINR, REVENUE_SHARE_PERCENT } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, formatINR, REVENUE_SHARE_PERCENT, TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 
 declare global {
@@ -57,6 +57,39 @@ export default function BillingPage() {
     }
   }
 
+  async function startTrial() {
+    setLoadingTier("TRIAL");
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/trial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
+      if (!window.Razorpay) throw new Error("Payment library failed to load. Refresh and retry.");
+
+      new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        order_id: data.orderId,
+        amount: data.amountPaise,
+        currency: "INR",
+        name: "Adventure AI",
+        description: `Trial till 15 July — ${data.companyName}`,
+        theme: { color: "#fb7f14" },
+        handler: () => {
+          // Webhook activates the trial; back to the company page.
+          router.push(`/c/${slug}?upgraded=1`);
+        },
+      }).open();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+    } finally {
+      setLoadingTier(null);
+    }
+  }
+
   async function buyCredits(credits: number) {
     setLoadingPack(credits);
     setError(null);
@@ -97,6 +130,26 @@ export default function BillingPage() {
         UPI Autopay and card mandates supported. Cancel anytime — you keep your repo and a full
         data export for 90 days.
       </p>
+
+      {trialAvailable() && (
+        <Card className="mt-8 border-brand-500">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">Limited-time trial</h2>
+                <Badge>Till 15 July</Badge>
+              </div>
+              <p className="mt-1 text-sm text-ink-400">
+                Everything in Pro until 15 July for a one-time {formatINR(TRIAL_PRICE_PAISE)} —
+                no mandate, no auto-renewal.
+              </p>
+            </div>
+            <Button disabled={loadingTier !== null} onClick={startTrial}>
+              {loadingTier === "TRIAL" ? "Opening checkout…" : `Try for ${formatINR(TRIAL_PRICE_PAISE)}`}
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {(["PRO", "SCALE"] as const).map((tier) => {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 
 const DEMO_FEED = [
@@ -80,6 +80,27 @@ export default function LandingPage() {
       {/* Pricing */}
       <section id="pricing" className="mx-auto max-w-6xl px-6 pb-24">
         <h2 className="mb-10 text-center text-3xl font-bold">Pricing</h2>
+
+        {trialAvailable() && (
+          <Card className="mb-8 border-brand-500">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-semibold">Limited-time trial</h3>
+                  <Badge>Till 15 July</Badge>
+                </div>
+                <p className="mt-1 text-sm text-ink-400">
+                  Everything in Pro for a one-time {formatINR(TRIAL_PRICE_PAISE)} — no mandate,
+                  no auto-renewal. Offer and access end 15 July.
+                </p>
+              </div>
+              <Link href="/login">
+                <Button>Try for {formatINR(TRIAL_PRICE_PAISE)}</Button>
+              </Link>
+            </div>
+          </Card>
+        )}
+
         <div className="grid gap-6 md:grid-cols-3">
           {(["FREE", "PRO", "SCALE"] as const).map((tier) => {
             const plan = PLANS[tier];
