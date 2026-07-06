@@ -20,7 +20,10 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       </header>
       {children}
       <footer className="border-t border-ink-800 py-10 text-center text-sm text-ink-400">
-        © {new Date().getFullYear()} Adventure AI · adventureadvertising.in
+        © {new Date().getFullYear()} Adventure AI ·{" "}
+        <a href="https://adventure-ai.in" className="hover:text-white underline underline-offset-2">
+          adventure-ai.in
+        </a>
       </footer>
     </div>
   );
