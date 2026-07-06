@@ -12,7 +12,7 @@ adventure-ai/
 ├── apps/
 │   ├── web/                          # Next.js 14 App Router → Vercel
 │   │   ├── app/
-│   │   │   ├── (marketing)/          # adventureadvertising.in public site
+│   │   │   ├── (marketing)/          # www.adventure-ai.in public site
 │   │   │   │   ├── page.tsx          # hero, live demo feed, pricing, FAQ
 │   │   │   │   ├── pricing/page.tsx
 │   │   │   │   └── live/page.tsx     # public read-only activity feed (Phase 5)

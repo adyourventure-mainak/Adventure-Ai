@@ -3,7 +3,7 @@
 ## Web → Vercel (done — 2026-07-04)
 
 - Project: **adventure-ai** (team "Adventure AI", `prj_i86JepEL1eGJWjK0Mw034cgBhpjc`)
-- Production URL: https://adventure-ai-nine.vercel.app
+- Production URL: https://www.adventure-ai.in (Vercel: adventure-ai-nine.vercel.app)
 - Root directory: `apps/web`; 12 env vars set for production+preview
   (DB, Supabase, OpenAI, Razorpay — NOT GitHub/Vercel tokens, those are worker-only).
 - Deployed via CLI (`pnpm dlx vercel deploy --prod`). To move to git-triggered
@@ -46,7 +46,7 @@ for push-to-deploy, same as recommended for Vercel.
 ## Razorpay webhook (manual — live account change)
 
 Dashboard → Settings → Webhooks → Add:
-- URL: `https://adventure-ai-nine.vercel.app/api/webhooks/razorpay`
+- URL: `https://www.adventure-ai.in/api/webhooks/razorpay`
 - Secret: the value of `RAZORPAY_WEBHOOK_SECRET`
 - Events: `subscription.activated/charged/halted/paused/cancelled/completed`,
   `payment.captured`, `transfer.processed/failed/reversed`
@@ -56,12 +56,12 @@ Or via API:
 ```bash
 curl -u "$RAZORPAY_KEY_ID:$RAZORPAY_KEY_SECRET" -X POST https://api.razorpay.com/v1/webhooks \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://adventure-ai-nine.vercel.app/api/webhooks/razorpay","secret":"<RAZORPAY_WEBHOOK_SECRET>","events":{"subscription.activated":true,"subscription.charged":true,"subscription.halted":true,"subscription.paused":true,"subscription.cancelled":true,"subscription.completed":true,"payment.captured":true,"transfer.processed":true,"transfer.failed":true,"transfer.reversed":true}}'
+  -d '{"url":"https://www.adventure-ai.in/api/webhooks/razorpay","secret":"<RAZORPAY_WEBHOOK_SECRET>","events":{"subscription.activated":true,"subscription.charged":true,"subscription.halted":true,"subscription.paused":true,"subscription.cancelled":true,"subscription.completed":true,"payment.captured":true,"transfer.processed":true,"transfer.failed":true,"transfer.reversed":true}}'
 ```
 
 ## Custom domain
 
-Vercel project → Settings → Domains → add `adventureadvertising.in`
+Vercel project → Settings → Domains → add `adventure-ai.in`
 (+ `www`), then point DNS: `A 76.76.21.21` / `CNAME cname.vercel-dns.com`.
 Update `NEXT_PUBLIC_APP_URL` env var and the webhook URL afterwards.
 

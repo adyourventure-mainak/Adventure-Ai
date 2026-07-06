@@ -57,7 +57,7 @@ export async function provisionCompany(companyId: string): Promise<void> {
         await github.putFile({
           repoFullName: repo.full_name,
           path: "README.md",
-          content: `# ${company.name}\n\nThis repository is operated by [Adventure AI](https://adventureadvertising.in). You own it.\n`,
+          content: `# ${company.name}\n\nThis repository is operated by [Adventure AI](https://www.adventure-ai.in). You own it.\n`,
           message: "chore: add README",
         });
         repoFullName = repo.full_name;

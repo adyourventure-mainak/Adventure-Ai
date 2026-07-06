@@ -1,7 +1,7 @@
 # Adventure AI
 
 Autonomous AI system that plans, builds, markets, and operates online businesses —
-"an AI co-founder that runs your company 24/7". Hosted at **adventureadvertising.in**.
+"an AI co-founder that runs your company 24/7". Hosted at **www.adventure-ai.in**.
 
 ## Monorepo layout
 
