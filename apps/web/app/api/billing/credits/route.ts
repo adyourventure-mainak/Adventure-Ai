@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@adventure/db";
+import { prisma, grantCredits } from "@adventure/db";
 import { CREDIT_PACKS } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
@@ -34,6 +34,17 @@ export async function POST(request: Request) {
   }
   if (company.planTier === "FREE") {
     return NextResponse.json({ error: "Credits are for paid plans — upgrade first." }, { status: 403 });
+  }
+
+  // BILLING_TEST_MODE=1: grant without payment while Razorpay website
+  // verification is pending. Remove the env var to restore real checkout.
+  if (process.env.BILLING_TEST_MODE === "1") {
+    await grantCredits(
+      company.id,
+      pack.credits,
+      `Credit pack (billing test mode — no charge, ${pack.credits} credits)`,
+    );
+    return NextResponse.json({ activated: true, credits: pack.credits, companyName: company.name });
   }
 
   const order = await razorpay.createOrder({

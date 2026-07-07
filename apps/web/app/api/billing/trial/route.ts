@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
+import { PLANS, TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
 
@@ -35,6 +35,32 @@ export async function POST(request: Request) {
   }
   if (company.planTier !== "FREE") {
     return NextResponse.json({ error: "The trial is only for companies on the Free plan" }, { status: 409 });
+  }
+
+  // BILLING_TEST_MODE=1: activate without payment while Razorpay website
+  // verification is pending. Remove the env var to restore real checkout.
+  if (process.env.BILLING_TEST_MODE === "1") {
+    const plan = PLANS.TRIAL;
+    await prisma.$transaction([
+      prisma.company.update({
+        where: { id: company.id },
+        data: {
+          planTier: "TRIAL",
+          taskCyclesPerDay: plan.taskCyclesPerDay,
+          status: "PROVISIONING",
+          lapsedAt: null,
+        },
+      }),
+      prisma.activityLog.create({
+        data: {
+          companyId: company.id,
+          agent: "FINANCE",
+          action: "Trial activated (billing test mode — no charge)",
+          isPublic: false,
+        },
+      }),
+    ]);
+    return NextResponse.json({ activated: true, companyName: company.name });
   }
 
   const order = await razorpay.createOrder({

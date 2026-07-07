@@ -37,6 +37,11 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
+      if (data.activated) {
+        // Billing test mode: no payment needed.
+        router.push(`/c/${slug}?upgraded=1`);
+        return;
+      }
       if (!window.Razorpay) throw new Error("Payment library failed to load. Refresh and retry.");
 
       new window.Razorpay({
@@ -68,6 +73,11 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
+      if (data.activated) {
+        // Billing test mode: no payment needed.
+        router.push(`/c/${slug}?upgraded=1`);
+        return;
+      }
       if (!window.Razorpay) throw new Error("Payment library failed to load. Refresh and retry.");
 
       new window.Razorpay({
@@ -101,6 +111,11 @@ export default function BillingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
+      if (data.activated) {
+        // Billing test mode: no payment needed.
+        router.push(`/c/${slug}?credits=1`);
+        return;
+      }
       if (!window.Razorpay) throw new Error("Payment library failed to load. Refresh and retry.");
 
       new window.Razorpay({

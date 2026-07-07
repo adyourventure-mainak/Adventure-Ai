@@ -29,6 +29,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This company already has an active subscription" }, { status: 409 });
   }
 
+  // BILLING_TEST_MODE=1: activate without payment while Razorpay website
+  // verification is pending. No Subscription row is created — nothing to bill.
+  if (process.env.BILLING_TEST_MODE === "1") {
+    const plan = PLANS[tier];
+    await prisma.$transaction([
+      prisma.company.update({
+        where: { id: company.id },
+        data: {
+          planTier: tier,
+          taskCyclesPerDay: plan.taskCyclesPerDay,
+          status: "PROVISIONING",
+          lapsedAt: null,
+        },
+      }),
+      prisma.activityLog.create({
+        data: {
+          companyId: company.id,
+          agent: "FINANCE",
+          action: `${plan.name} plan activated (billing test mode — no charge)`,
+          isPublic: false,
+        },
+      }),
+    ]);
+    return NextResponse.json({ activated: true, companyName: company.name });
+  }
+
   const planEnv = PLANS[tier].razorpayPlanEnv!;
   const razorpayPlanId = process.env[planEnv];
   if (!razorpayPlanId) {
