@@ -46,16 +46,25 @@ export async function generateAndStoreImage(params: {
     throw new Error("Image storage not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)");
   }
 
+  // No response_format param — newer image models reject it. Handle both
+  // shapes: b64_json (gpt-image-1 default) and a temporary URL (dall-e-3).
   const result = await openai().images.generate({
     model: process.env.OPENAI_IMAGE_MODEL || "dall-e-3",
     prompt: params.prompt,
     size: "1024x1024",
     n: 1,
-    response_format: "b64_json",
   });
-  const b64 = result.data?.[0]?.b64_json;
-  if (!b64) throw new Error("Image generation returned no data");
-  const bytes = Buffer.from(b64, "base64");
+  const datum = result.data?.[0];
+  let bytes: Buffer;
+  if (datum?.b64_json) {
+    bytes = Buffer.from(datum.b64_json, "base64");
+  } else if (datum?.url) {
+    const res = await fetch(datum.url);
+    if (!res.ok) throw new Error(`Image download failed (${res.status})`);
+    bytes = Buffer.from(await res.arrayBuffer());
+  } else {
+    throw new Error("Image generation returned no data");
+  }
 
   await ensureBucket();
   const path = `${params.companyId}/${Date.now()}.png`;
