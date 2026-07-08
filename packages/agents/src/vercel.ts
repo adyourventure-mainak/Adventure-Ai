@@ -58,6 +58,14 @@ export async function deployProject(params: {
       name: params.projectName,
       target: "production",
       gitSource: { type: "github", repoId: params.repoId, ref: params.ref ?? "main" },
+      // Static HTML at repo root — no build. Required on a project's first
+      // deploy, else Vercel rejects with "missing_project_settings".
+      projectSettings: {
+        framework: null,
+        buildCommand: null,
+        installCommand: null,
+        outputDirectory: ".",
+      },
     }),
   });
 }
