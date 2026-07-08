@@ -9,7 +9,7 @@ GT=$(grep '^GITHUB_TOKEN' "$E"   | sed 's/^[^=]*="\{0,1\}//;s/"$//')
 TEAM=$(grep '^VERCEL_TEAM_ID' "$E" | sed 's/^[^=]*="\{0,1\}//;s/"$//')
 
 # Add/remove slugs here as needed.
-for slug in adsprint-04gy quotegenius-jh3g brewglobe-utmt; do
+for slug in adsprint-04gy quotegenius-jh3g brewglobe-utmt craftbot-juxo; do
   repo="adyourventure-mainak/$slug"
   rid=$(curl -s -H "Authorization: Bearer $GT" "https://api.github.com/repos/$repo" \
         | python3 -c "import sys,json;print(json.load(sys.stdin)['id'])")
