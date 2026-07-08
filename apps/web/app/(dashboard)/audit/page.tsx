@@ -18,11 +18,7 @@ export default async function AuditPage() {
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Business audit</h1>
-        <p className="mt-1 text-sm text-ink-400">
-          Already running a business? Get market research, a SWOT analysis, the scope for your
-          products or services, and a growth implementation plan from a senior marketing
-          executive — built from your website.
-        </p>
+        <p className="mt-1 text-sm text-ink-400">Expert analysis.</p>
       </div>
 
       <AuditRequestForm />

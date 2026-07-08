@@ -85,6 +85,27 @@ export default async function AuditReportPage({ params }: { params: { id: string
                 <h3 className="text-xs font-semibold uppercase text-ink-400">Competitive landscape</h3>
                 <p className="mt-1">{report.marketResearch.competitiveLandscape}</p>
               </div>
+              {report.marketResearch.namedCompetitors?.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold uppercase text-ink-400">
+                    Competitors — local & global
+                  </h3>
+                  <div className="mt-2 grid gap-3 md:grid-cols-2">
+                    {report.marketResearch.namedCompetitors.map((c) => (
+                      <div key={c.name} className="rounded-lg border border-ink-800 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold">{c.name}</p>
+                          <Badge variant="outline">{c.scope === "LOCAL" ? "Local" : "Global"}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs font-semibold text-ink-400">Market strengths</p>
+                        <ul className="list-inside list-disc">
+                          {c.marketStrengths.map((s) => <li key={s}>{s}</li>)}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 

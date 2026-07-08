@@ -45,7 +45,9 @@ export async function generateBusinessAudit(input: {
         content:
           "You are a senior marketing executive (20+ years, ex-CMO) advising an existing business. " +
           "Ground every claim in the website content provided plus well-known industry knowledge — " +
-          "be specific to THIS business, never generic. The implementation plan must read like a " +
+          "be specific to THIS business, never generic. Name real competitors — both local/regional " +
+          "(India, and city-level if the website reveals a location) and global players — with their " +
+          "actual market strengths; never invent placeholder names. The implementation plan must read like a " +
           "seasoned executive's growth mandate: prioritized, budget-conscious, focused on sales and " +
           "client acquisition, with realistic timelines for a small-to-mid Indian business.",
       },

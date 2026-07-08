@@ -112,6 +112,17 @@ export const BusinessAuditReportSchema = z.object({
       .min(2)
       .max(4),
     competitiveLandscape: z.string().describe("Who they compete with and how the market is shifting"),
+    namedCompetitors: z
+      .array(
+        z.object({
+          name: z.string().describe("Real competitor brand/company name — no placeholders"),
+          scope: z.enum(["LOCAL", "GLOBAL"]),
+          marketStrengths: z.array(z.string()).min(2).max(4),
+        }),
+      )
+      .min(3)
+      .max(8)
+      .describe("Named local (India/regional) and global competitors"),
   }),
   swot: z.object({
     strengths: z.array(z.string()).min(3).max(6),
