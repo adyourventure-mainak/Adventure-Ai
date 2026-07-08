@@ -34,6 +34,34 @@ export interface VercelProject {
   name: string;
 }
 
+export interface VercelDeployment {
+  id: string;
+  url: string;
+  readyState?: string;
+}
+
+/**
+ * Trigger a production deployment from the project's linked GitHub repo.
+ * Linking a project alone does NOT deploy — Vercel only auto-builds on pushes
+ * that arrive *after* the link exists, and the initial site push happens
+ * before linking. Without this, the `.vercel.app` domain 404s with
+ * DEPLOYMENT_NOT_FOUND until the next push. Idempotent to call again.
+ */
+export async function deployProject(params: {
+  projectName: string;
+  repoId: number;
+  ref?: string;
+}): Promise<VercelDeployment> {
+  return vc<VercelDeployment>("/v13/deployments", {
+    method: "POST",
+    body: JSON.stringify({
+      name: params.projectName,
+      target: "production",
+      gitSource: { type: "github", repoId: params.repoId, ref: params.ref ?? "main" },
+    }),
+  });
+}
+
 /**
  * Create a project linked to a GitHub repo; Vercel then deploys on every push.
  * Idempotent: if the project name is taken (409) — e.g. a previous provisioning

@@ -86,6 +86,14 @@ export async function provisionCompany(companyId: string): Promise<void> {
     } else {
       try {
         const { project, url } = await vercel.createProject({ name: company.slug, repoFullName });
+        // Linking alone does not deploy — trigger the first production build
+        // explicitly, or the .vercel.app domain 404s (DEPLOYMENT_NOT_FOUND).
+        try {
+          const repo = await github.getRepo(repoFullName);
+          await vercel.deployProject({ projectName: project.name, repoId: repo.id });
+        } catch (deployErr) {
+          await logActivity({ companyId, agent: "ENGINEER", action: `Vercel project linked but the first deploy could not be triggered: ${String(deployErr).slice(0, 200)}` });
+        }
         await record(companyId, "VERCEL_PROJECT", { status: "DONE", externalId: project.id, meta: { url } });
         if (company.landingPage) {
           await prisma.landingPage.update({ where: { companyId }, data: { deployedUrl: url } });

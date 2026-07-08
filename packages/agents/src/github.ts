@@ -27,9 +27,15 @@ async function gh<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export interface GhRepo {
+  id: number;
   full_name: string;
   html_url: string;
   default_branch: string;
+}
+
+/** Fetch a repo (used to get the numeric id Vercel needs to trigger a deploy). */
+export async function getRepo(repoFullName: string): Promise<GhRepo> {
+  return gh<GhRepo>(`/repos/${repoFullName}`);
 }
 
 /** Create a repo under the token's user (platform account; ownership transfer is a later phase). */
