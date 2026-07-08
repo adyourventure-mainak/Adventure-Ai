@@ -26,6 +26,18 @@ export const CompanyFoundationSchema = z.object({
     .describe("Who the target customer is, the problem, and why this wins"),
   brandVoice: z.string().describe("2-3 adjectives + a sentence on tone"),
   landingCopy: LandingCopySchema,
+  design: z
+    .object({
+      accentColor: z.string().describe("Primary brand hex color that fits this business, e.g. #2563eb"),
+      accentDarkColor: z.string().describe("A darker shade of the accent for hovers/gradients, e.g. #1e40af"),
+      fontFamily: z
+        .enum(["sans", "serif", "rounded", "mono"])
+        .describe("Typography vibe: sans=modern, serif=premium/editorial, rounded=friendly, mono=technical"),
+      style: z
+        .enum(["minimal", "bold", "playful", "elegant", "corporate"])
+        .describe("Overall visual style that matches the brand"),
+    })
+    .describe("Site design tokens chosen to fit this specific company"),
   thirtyDayPlan: z
     .array(
       z.object({
@@ -43,7 +55,13 @@ export type CompanyFoundation = z.infer<typeof CompanyFoundationSchema>;
 export const CreateCompanyInput = z.object({
   idea: z.string().max(2000).optional(),
   surprise: z.boolean().default(false),
+  // WhatsApp contact number for the generated site (optional). Loosely
+  // validated here; the API normalizes to E.164.
+  phone: z.string().max(20).optional(),
 });
+
+/** Design tokens type (from CompanyFoundationSchema.design), stored on Company.theme. */
+export type CompanyTheme = CompanyFoundation["design"];
 export type CreateCompanyInput = z.infer<typeof CreateCompanyInput>;
 
 /** 30-day advertisement plan with segment & competitor research (paid tiers). */

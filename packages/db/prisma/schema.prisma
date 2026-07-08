@@ -173,10 +173,14 @@ model Company {
   planTier      PlanTier      @default(FREE)
   autonomyLevel AutonomyLevel @default(APPROVE_OUTBOUND)
 
+  // Contact
+  phone String? // WhatsApp contact number (E.164, e.g. +919876543210)
+
   // Generated at onboarding
   ideaSummary String? @db.Text
   positioning String? @db.Text
   brandVoice  String? @db.Text
+  theme       Json?   // company-specific site design (accent, fonts, style)
 
   // Caps & limits (admin/user configurable)
   llmDailyTokenCap  Int @default(2000000)

@@ -96,6 +96,28 @@ export function queuePriority(tier: PlanTier): number {
   return planAllows(tier, "PRIORITY_QUEUE") ? 1 : 5;
 }
 
+/** Max companies a single tier entitles an owner to. */
+export function companyLimitForTier(tier: PlanTier): number {
+  switch (tier) {
+    case "SCALE":
+      return 8;
+    case "PRO":
+    case "TRIAL":
+      return 5;
+    case "FREE":
+      return 1;
+  }
+}
+
+/**
+ * How many companies an owner may have, given the plan tiers of the companies
+ * they already own. Entitlement is the best tier they hold (a Scale company
+ * lifts the whole account to 8); everyone can always create their first.
+ */
+export function companyLimitForOwner(ownedTiers: PlanTier[]): number {
+  return Math.max(1, ...ownedTiers.map(companyLimitForTier));
+}
+
 export const CREDIT_PACKS = [
   { credits: 10, pricePaise: 80000 },
   { credits: 50, pricePaise: 360000 },

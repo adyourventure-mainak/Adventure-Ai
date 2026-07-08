@@ -1,5 +1,5 @@
 import { prisma } from "@adventure/db";
-import type { LandingCopy } from "@adventure/core";
+import type { CompanyTheme, LandingCopy } from "@adventure/core";
 import { logActivity } from "./activity";
 import { saveMemory } from "./memory";
 import * as github from "./github";
@@ -52,6 +52,8 @@ export async function provisionCompany(companyId: string): Promise<void> {
             companyName: company.name,
             ideaSummary: company.ideaSummary,
             positioning: company.positioning,
+            phone: company.phone,
+            theme: company.theme as CompanyTheme | null,
             copy,
           })) {
             await github.putFile({

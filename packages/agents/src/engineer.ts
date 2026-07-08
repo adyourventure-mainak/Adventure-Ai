@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { LandingCopySchema, type LandingCopy } from "@adventure/core";
+import { LandingCopySchema, type CompanyTheme, type LandingCopy } from "@adventure/core";
 import { openai, model, usageFrom } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
@@ -76,6 +76,8 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
       companyName: company.name,
       ideaSummary: company.ideaSummary,
       positioning: company.positioning,
+      phone: company.phone,
+      theme: company.theme as CompanyTheme | null,
       copy: parsed.updatedCopy as LandingCopy,
     })) {
       await github.putFile({

@@ -15,6 +15,7 @@ const LOADING_STEPS = [
 export default function OnboardingPage() {
   const router = useRouter();
   const [idea, setIdea] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,9 @@ export default function OnboardingPage() {
       const res = await fetch("/api/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(surprise ? { surprise: true } : { idea }),
+        body: JSON.stringify(
+          surprise ? { surprise: true, phone } : { idea, phone },
+        ),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
@@ -68,6 +71,23 @@ export default function OnboardingPage() {
           onChange={(e) => setIdea(e.target.value)}
           maxLength={2000}
         />
+        <div className="mt-4">
+          <label htmlFor="phone" className="text-sm font-medium text-ink-100">
+            WhatsApp number <span className="text-ink-400">(optional)</span>
+          </label>
+          <input
+            id="phone"
+            type="tel"
+            placeholder="+91 98765 43210"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            maxLength={20}
+            className="mt-1 w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
+          />
+          <p className="mt-1 text-xs text-ink-400">
+            Adds a WhatsApp chat button to your company's website. Include the country code.
+          </p>
+        </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <Button className="flex-1" disabled={idea.trim().length < 10} onClick={() => create(false)}>
             Build this idea

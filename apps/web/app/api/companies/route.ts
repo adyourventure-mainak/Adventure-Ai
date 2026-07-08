@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@adventure/db";
-import { CreateCompanyInput } from "@adventure/core";
+import { CreateCompanyInput, companyLimitForOwner } from "@adventure/core";
 import { generateCompanyFoundation, slugify, logActivity } from "@adventure/agents";
 import { getUser } from "@/lib/auth";
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { idea, surprise } = parsed.data;
+  const { idea, surprise, phone } = parsed.data;
   if (!surprise && (!idea || idea.trim().length < 10)) {
     return NextResponse.json(
       { error: "Describe your idea in at least a sentence, or use Surprise me." },
@@ -34,13 +34,33 @@ export async function POST(request: Request) {
     );
   }
 
-  // Free tier: 1 draft company per user.
-  const existing = await prisma.company.count({
-    where: { ownerId: user.id, planTier: "FREE" },
+  // Normalize the WhatsApp number to E.164-ish (digits + leading +).
+  let normalizedPhone: string | null = null;
+  if (phone && phone.trim()) {
+    const digits = phone.replace(/[^\d+]/g, "");
+    if (digits.replace(/\D/g, "").length < 8) {
+      return NextResponse.json({ error: "Enter a valid WhatsApp number with country code." }, { status: 400 });
+    }
+    normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
+  }
+
+  // Per-owner company cap, scaled by the best plan tier they hold
+  // (Free 1, Pro/Trial 5, Scale 8).
+  const owned = await prisma.company.findMany({
+    where: { ownerId: user.id },
+    select: { planTier: true },
   });
-  if (existing >= 1) {
+  const limit = companyLimitForOwner(owned.map((c) => c.planTier));
+  if (owned.length >= limit) {
     return NextResponse.json(
-      { error: "Free plan includes 1 company. Upgrade an existing company to create more." },
+      {
+        error:
+          limit >= 8
+            ? "You've reached the maximum of 8 companies on the Scale plan."
+            : limit >= 5
+              ? "You've reached 5 companies. Upgrade a company to Scale to create up to 8."
+              : "Free plan includes 1 company. Upgrade a company to Pro (5) or Scale (8) to create more.",
+      },
       { status: 403 },
     );
   }
@@ -62,9 +82,11 @@ export async function POST(request: Request) {
       ownerId: user.id,
       name: foundation.companyName,
       slug: slugify(foundation.companyName),
+      phone: normalizedPhone,
       ideaSummary: foundation.ideaSummary,
       positioning: foundation.positioning,
       brandVoice: foundation.brandVoice,
+      theme: foundation.design,
       plan: { create: { thirtyDayPlan: foundation.thirtyDayPlan } },
       landingPage: { create: { copy: foundation.landingCopy } },
       agentStates: {
