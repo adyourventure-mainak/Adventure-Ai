@@ -20,6 +20,7 @@ async function ensureBucket(): Promise<void> {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
@@ -62,6 +63,7 @@ export async function generateAndStoreImage(params: {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
       "Content-Type": "image/png",
       "x-upsert": "true",
     },
