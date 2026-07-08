@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@adventure/db";
+import { prisma, grantWelcomeCredits } from "@adventure/db";
 import { PLANS } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
@@ -61,6 +61,7 @@ export async function POST(request: Request) {
         },
       }),
     ]);
+    await grantWelcomeCredits(company.id);
     return NextResponse.json({ activated: true, companyName: company.name });
   }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma, prisma, grantCredits } from "@adventure/db";
+import { Prisma, prisma, grantCredits, grantWelcomeCredits } from "@adventure/db";
 import { PLANS, REVENUE_SHARE_PERCENT } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 
@@ -94,6 +94,7 @@ async function handleEvent(event: {
           },
         }),
       ]);
+      await grantWelcomeCredits(record.companyId); // no-op on renewals
       break;
     }
 
@@ -184,6 +185,7 @@ async function handleEvent(event: {
             },
           }),
         ]);
+        await grantWelcomeCredits(payment.notes.companyId);
         return;
       }
 

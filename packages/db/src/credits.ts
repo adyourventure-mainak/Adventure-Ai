@@ -48,6 +48,23 @@ export function grantCredits(companyId: string, credits: number, reason: string,
   return appendEntry({ companyId, type: razorpayOrderId ? "PURCHASE" : "GRANT", delta: credits, reason, razorpayOrderId });
 }
 
+export const WELCOME_CREDITS = 8;
+const WELCOME_REASON = "Welcome credits — included with your subscription";
+
+/**
+ * One-time signup grant on a company's first paid activation. Idempotent:
+ * renewal webhooks and re-activations call this freely; only the first call
+ * writes the grant. After these are spent, credit packs are the only top-up.
+ */
+export async function grantWelcomeCredits(companyId: string) {
+  const existing = await prisma.creditLedgerEntry.findFirst({
+    where: { companyId, type: "GRANT", reason: WELCOME_REASON },
+    select: { id: true },
+  });
+  if (existing) return null;
+  return appendEntry({ companyId, type: "GRANT", delta: WELCOME_CREDITS, reason: WELCOME_REASON });
+}
+
 export function consumeCredits(companyId: string, credits: number, reason: string, taskId?: string) {
   return appendEntry({
     companyId,
