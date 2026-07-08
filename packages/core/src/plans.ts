@@ -79,6 +79,23 @@ export const PLANS: Record<PlanTier, PlanDef> = {
   },
 };
 
+/** Paid-tier perks enforced across web and worker. */
+export type PlanPerk = "AD_PLAN" | "PRIORITY_QUEUE";
+
+export function planAllows(tier: PlanTier, perk: PlanPerk): boolean {
+  switch (perk) {
+    case "AD_PLAN":
+      return tier !== "FREE"; // any paying customer (incl. ₹10 trial)
+    case "PRIORITY_QUEUE":
+      return tier === "SCALE";
+  }
+}
+
+/** BullMQ job priority (lower = sooner). Scale jumps the queue. */
+export function queuePriority(tier: PlanTier): number {
+  return planAllows(tier, "PRIORITY_QUEUE") ? 1 : 5;
+}
+
 export const CREDIT_PACKS = [
   { credits: 10, pricePaise: 80000 },
   { credits: 50, pricePaise: 360000 },

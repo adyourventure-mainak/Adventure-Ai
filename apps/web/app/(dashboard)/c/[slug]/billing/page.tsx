@@ -17,6 +17,39 @@ export default function BillingPage() {
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [loadingPack, setLoadingPack] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<{
+    planTier: "FREE" | "TRIAL" | "PRO" | "SCALE";
+    companyStatus: string;
+    subscriptionStatus: string | null;
+    currentPeriodEnd: string | null;
+  } | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/billing/status?slug=${slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setStatus)
+      .catch(() => {});
+  }, [slug]);
+
+  async function cancelPlan() {
+    if (!window.confirm("Cancel this plan? Agents stop and the company enters a 90-day retention window.")) return;
+    setCancelling(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/billing/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not cancel");
+      router.push(`/c/${slug}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong");
+      setCancelling(false);
+    }
+  }
 
   useEffect(() => {
     if (document.getElementById("rzp-script")) return;
@@ -146,7 +179,33 @@ export default function BillingPage() {
         data export for 90 days.
       </p>
 
-      {trialAvailable() && (
+      {status && status.planTier !== "FREE" && (
+        <Card className="mt-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">Current plan: {PLANS[status.planTier].name}</h2>
+                <Badge variant={status.companyStatus === "ACTIVE" ? "success" : "outline"}>
+                  {status.companyStatus}
+                </Badge>
+              </div>
+              <p className="mt-1 text-sm text-ink-400">
+                {status.currentPeriodEnd
+                  ? `Renews ${new Date(status.currentPeriodEnd).toLocaleDateString("en-IN")}.`
+                  : status.planTier === "TRIAL"
+                    ? "One-time trial — valid till 15 July, no auto-renewal."
+                    : "No renewal scheduled."}{" "}
+                Switch plans below, or cancel — you keep your repo and a full data export for 90 days.
+              </p>
+            </div>
+            <Button variant="outline" disabled={cancelling} onClick={cancelPlan}>
+              {cancelling ? "Cancelling…" : "Cancel plan"}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {status?.planTier === "FREE" && trialAvailable() && (
         <Card className="mt-8 border-brand-500">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -188,10 +247,16 @@ export default function BillingPage() {
               </ul>
               <Button
                 className="mt-6 w-full"
-                disabled={loadingTier !== null}
+                disabled={loadingTier !== null || status?.planTier === tier}
                 onClick={() => subscribe(tier)}
               >
-                {loadingTier === tier ? "Opening checkout…" : `Subscribe to ${plan.name}`}
+                {loadingTier === tier
+                  ? "Opening checkout…"
+                  : status?.planTier === tier
+                    ? "Current plan"
+                    : status && status.planTier !== "FREE"
+                      ? `Switch to ${plan.name}`
+                      : `Subscribe to ${plan.name}`}
               </Button>
             </Card>
           );

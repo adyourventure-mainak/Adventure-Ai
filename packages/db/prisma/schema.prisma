@@ -388,6 +388,8 @@ model CompanyPlan {
   companyId     String   @unique
   company       Company  @relation(fields: [companyId], references: [id])
   thirtyDayPlan Json     // generated at onboarding
+  adPlan          Json?     // 30-day ad plan w/ segment & competitor research (paid tiers)
+  adPlanUpdatedAt DateTime?
   roadmap       Json     @default("[]")
   okrs          Json     @default("[]")
   updatedAt     DateTime @updatedAt

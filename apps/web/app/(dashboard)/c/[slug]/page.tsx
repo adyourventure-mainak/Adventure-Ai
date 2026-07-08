@@ -53,6 +53,9 @@ export default async function CompanyPage({ params }: { params: { slug: string }
           <p className="mt-1 text-sm text-ink-400">{company.ideaSummary}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link href={`/c/${company.slug}/plan`}>
+            <Badge variant="outline" className="cursor-pointer">Growth plan</Badge>
+          </Link>
           {!isFree && (
             <Link href={`/c/${company.slug}/approvals`}>
               <Badge

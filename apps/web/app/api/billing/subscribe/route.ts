@@ -25,8 +25,17 @@ export async function POST(request: Request) {
   if (!company || company.ownerId !== user.id) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
-  if (company.subscription?.status === "ACTIVE") {
-    return NextResponse.json({ error: "This company already has an active subscription" }, { status: 409 });
+  if (company.subscription?.status === "ACTIVE" && company.planTier === tier) {
+    return NextResponse.json({ error: `This company is already on the ${tier} plan` }, { status: 409 });
+  }
+  // Tier change: Razorpay has no in-place plan switch — cancel the old
+  // subscription first; the new one below replaces it.
+  if (company.subscription?.status === "ACTIVE" && company.subscription.razorpaySubscriptionId) {
+    try {
+      await razorpay.cancelSubscription(company.subscription.razorpaySubscriptionId);
+    } catch (err) {
+      console.error("[billing/subscribe] cancel of previous subscription failed:", err);
+    }
   }
 
   // BILLING_TEST_MODE=1: activate without payment while Razorpay website
