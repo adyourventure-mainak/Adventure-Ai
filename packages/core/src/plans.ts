@@ -4,14 +4,10 @@
 
 export type PlanTier = "FREE" | "TRIAL" | "PRO" | "SCALE";
 
-// Limited-time launch offer: one-time ₹10 payment unlocks Pro-level access
-// until this date (IST end of day). Purchase and access both end here.
-export const TRIAL_ENDS_AT = new Date("2026-07-15T23:59:59.999+05:30");
-export const TRIAL_PRICE_PAISE = 1000;
-
-export function trialAvailable(now: Date = new Date()): boolean {
-  return now < TRIAL_ENDS_AT;
-}
+// Trial: one-time payment unlocks Pro-level access for TRIAL_DAYS days
+// (per-company expiry stored on Company.trialEndsAt).
+export const TRIAL_PRICE_PAISE = 59900;
+export const TRIAL_DAYS = 15;
 
 export interface PlanDef {
   tier: PlanTier;
@@ -44,15 +40,15 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     razorpayPlanEnv: null, // one-time order (notes.type = "trial"), not a subscription
     features: [
       "Everything in Pro",
-      "One-time ₹10 — no mandate",
-      "Valid till 15 July",
+      "One-time ₹599 — no mandate",
+      "Valid for 15 days",
       "1 nightly task cycle / day",
     ],
   },
   PRO: {
     tier: "PRO",
     name: "Pro",
-    pricePaise: 399900,
+    pricePaise: 199900,
     taskCyclesPerDay: 1,
     razorpayPlanEnv: "RAZORPAY_PLAN_PRO",
     features: [
@@ -121,9 +117,9 @@ export function companyLimitForOwner(ownedTiers: PlanTier[]): number {
 }
 
 export const CREDIT_PACKS = [
-  { credits: 10, pricePaise: 80000 },
-  { credits: 50, pricePaise: 360000 },
-  { credits: 100, pricePaise: 640000 },
+  { credits: 10, pricePaise: 49900 },
+  { credits: 50, pricePaise: 199900 },
+  { credits: 100, pricePaise: 349900 },
 ] as const;
 
 /** Platform share of business revenue processed through Razorpay Route. */

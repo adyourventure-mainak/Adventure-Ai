@@ -4,6 +4,7 @@ export * from "./guardrails";
 export * from "./onboarding";
 export * from "./adplan";
 export * from "./audit";
+export * from "./images";
 export * from "./memory";
 export * from "./orchestrator";
 export * from "./engineer";

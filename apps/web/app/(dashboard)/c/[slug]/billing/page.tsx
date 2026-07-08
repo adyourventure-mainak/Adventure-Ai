@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PLANS, CREDIT_PACKS, formatINR, REVENUE_SHARE_PERCENT, TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, formatINR, REVENUE_SHARE_PERCENT, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 
 declare global {
@@ -119,7 +119,7 @@ export default function BillingPage() {
         amount: data.amountPaise,
         currency: "INR",
         name: "Adventure AI",
-        description: `Trial till 15 July — ${data.companyName}`,
+        description: `${TRIAL_DAYS}-day trial — ${data.companyName}`,
         theme: { color: "#fb7f14" },
         handler: () => {
           // Webhook activates the trial; back to the company page.
@@ -193,7 +193,7 @@ export default function BillingPage() {
                 {status.currentPeriodEnd
                   ? `Renews ${new Date(status.currentPeriodEnd).toLocaleDateString("en-IN")}.`
                   : status.planTier === "TRIAL"
-                    ? "One-time trial — valid till 15 July, no auto-renewal."
+                    ? `One-time ${TRIAL_DAYS}-day trial — no auto-renewal.`
                     : "No renewal scheduled."}{" "}
                 Switch plans below, or cancel — you keep your repo and a full data export for 90 days.
               </p>
@@ -205,16 +205,16 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {status?.planTier === "FREE" && trialAvailable() && (
+      {status?.planTier === "FREE" && (
         <Card className="mt-8 border-brand-500">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-semibold">Limited-time trial</h2>
-                <Badge>Till 15 July</Badge>
+                <Badge>{TRIAL_DAYS}-day trial</Badge>
               </div>
               <p className="mt-1 text-sm text-ink-400">
-                Everything in Pro until 15 July for a one-time {formatINR(TRIAL_PRICE_PAISE)} —
+                Everything in Pro for {TRIAL_DAYS} days — one-time {formatINR(TRIAL_PRICE_PAISE)},
                 no mandate, no auto-renewal.
               </p>
             </div>
@@ -225,8 +225,8 @@ export default function BillingPage() {
         </Card>
       )}
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
-        {(["PRO", "SCALE"] as const).map((tier) => {
+      <div className="mt-8 grid gap-6">
+        {(["PRO"] as const).map((tier) => {
           const plan = PLANS[tier];
           return (
             <Card key={tier} className={tier === "PRO" ? "border-brand-500" : ""}>

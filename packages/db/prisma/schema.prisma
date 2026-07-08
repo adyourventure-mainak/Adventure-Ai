@@ -173,8 +173,13 @@ model Company {
   planTier      PlanTier      @default(FREE)
   autonomyLevel AutonomyLevel @default(APPROVE_OUTBOUND)
 
-  // Contact
-  phone String? // WhatsApp contact number (E.164, e.g. +919876543210)
+  // Contact & social
+  phone        String? // WhatsApp contact number (E.164, e.g. +919876543210)
+  facebookUrl  String?
+  instagramUrl String?
+
+  // Trial
+  trialEndsAt DateTime? // set on TRIAL activation (now + 15 days)
 
   // Generated at onboarding
   ideaSummary String? @db.Text

@@ -7,6 +7,7 @@ import { Badge, Button, Card } from "@/components/ui";
 import { ActivityFeed } from "@/components/activity-feed";
 import { RequestTask } from "@/components/request-task";
 import { ForwardSupport } from "@/components/forward-support";
+import { SocialProfiles } from "@/components/social-profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -137,10 +138,10 @@ export default async function CompanyPage({ params }: { params: { slug: string }
       {!isFree && (
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
-            <h2 className="font-semibold">Ask your Engineer</h2>
+            <h2 className="font-semibold">Ask your agents</h2>
             <p className="mb-4 mt-1 text-sm text-ink-400">
-              Describe a landing page change in plain English. It runs beyond your included daily
-              cycle, so it uses a credit.
+              Request a site change from the Engineer, or a social post with a generated image
+              from the Social agent. Runs beyond your included daily cycle, so it uses a credit.
             </p>
             <RequestTask slug={company.slug} />
           </Card>
@@ -151,6 +152,17 @@ export default async function CompanyPage({ params }: { params: { slug: string }
               Free — it&apos;s your company serving its customers.
             </p>
             <ForwardSupport slug={company.slug} />
+          </Card>
+          <Card>
+            <h2 className="font-semibold">Social profiles</h2>
+            <p className="mb-4 mt-1 text-sm text-ink-400">
+              Add your Facebook and Instagram so the Social agent posts for the right platforms.
+            </p>
+            <SocialProfiles
+              slug={company.slug}
+              initialFacebook={company.facebookUrl}
+              initialInstagram={company.instagramUrl}
+            />
           </Card>
         </div>
       )}

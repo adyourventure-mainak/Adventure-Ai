@@ -1,6 +1,6 @@
 import type { Queue } from "bullmq";
 import { prisma } from "@adventure/db";
-import { TRIAL_ENDS_AT, queuePriority } from "@adventure/core";
+import { queuePriority } from "@adventure/core";
 import type { AgentQueueName } from "./queues";
 
 /**
@@ -17,11 +17,15 @@ import type { AgentQueueName } from "./queues";
 export function startScheduler(queues: Record<AgentQueueName, Queue>) {
   const tick = async () => {
     try {
-      // 0. Lapse expired ₹10 trials (offer ends TRIAL_ENDS_AT). LAPSED starts
-      // the same 90-day retention window as a cancelled subscription.
-      if (new Date() >= TRIAL_ENDS_AT) {
+      // 0. Lapse expired trials (Company.trialEndsAt = activation + 15 days).
+      // LAPSED starts the same 90-day retention window as a cancellation.
+      {
         const expired = await prisma.company.findMany({
-          where: { planTier: "TRIAL", status: { in: ["PROVISIONING", "ACTIVE", "PAUSED"] } },
+          where: {
+            planTier: "TRIAL",
+            status: { in: ["PROVISIONING", "ACTIVE", "PAUSED"] },
+            trialEndsAt: { lt: new Date() },
+          },
           select: { id: true },
         });
         for (const c of expired) {
@@ -34,7 +38,7 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
               data: {
                 companyId: c.id,
                 agent: "FINANCE",
-                action: "Trial ended (15 July) — upgrade to Pro to keep your agents running",
+                action: "Trial ended — upgrade to Pro to keep your agents running",
                 isPublic: false,
               },
             }),

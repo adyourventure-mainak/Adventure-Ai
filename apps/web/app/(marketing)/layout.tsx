@@ -23,7 +23,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         © {new Date().getFullYear()} Adventure AI ·{" "}
         <a href="https://adventure-ai.in" className="hover:text-white underline underline-offset-2">
           adventure-ai.in
-        </a>
+        </a>{" "}
+        · <Link href="/privacy" className="hover:text-white underline underline-offset-2">Privacy Policy</Link>
       </footer>
     </div>
   );

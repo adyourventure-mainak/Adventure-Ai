@@ -6,13 +6,17 @@ import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
 import { requestApproval, approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
+import { generateAndStoreImage, imageStorageConfigured } from "./images";
 
 export const SocialDraftSchema = z.object({
-  platform: z.enum(["twitter", "linkedin", "instagram"]),
+  platform: z.enum(["twitter", "linkedin", "instagram", "facebook"]),
   text: z.string().describe("The post body, ready to publish. Respect platform norms and length."),
   hashtags: z.array(z.string()).max(5).describe("Without the # prefix"),
+  imagePrompt: z
+    .string()
+    .describe("A vivid, brand-appropriate prompt for the accompanying image (photorealistic or clean illustration; no text in the image)"),
 });
-export type SocialDraft = z.infer<typeof SocialDraftSchema>;
+export type SocialDraft = z.infer<typeof SocialDraftSchema> & { imageUrl?: string };
 
 /**
  * Social agent — drafts posts from the orchestrator's topic (or a user
@@ -36,9 +40,13 @@ export async function runSocialTask(taskId: string): Promise<void> {
   const company = task.company;
   await assertWithinLlmCaps(company.id);
 
-  const topic =
-    (task.payload as { topic?: string; platform?: string })?.topic ?? task.title;
-  const preferredPlatform = (task.payload as { platform?: string })?.platform;
+  const payload = task.payload as { topic?: string; platform?: string; withImage?: boolean };
+  const topic = payload?.topic ?? task.title;
+  const preferredPlatform = payload?.platform;
+  const profiles = [
+    company.facebookUrl ? `Facebook: ${company.facebookUrl}` : null,
+    company.instagramUrl ? `Instagram: ${company.instagramUrl}` : null,
+  ].filter(Boolean);
   const memories = await recallMemories(company.id, topic, 5);
 
   const completion = await openai().beta.chat.completions.parse({
@@ -52,7 +60,7 @@ Brand voice: ${company.brandVoice}
 
 Write one social post that earns attention without hype. Hook in the first
 line, one idea per post, end with a reason to visit the site. No emoji walls,
-no engagement bait.${preferredPlatform ? ` Target platform: ${preferredPlatform}.` : ""}
+no engagement bait.${preferredPlatform ? ` Target platform: ${preferredPlatform}.` : ""}${profiles.length ? `\nThe company's connected profiles (prefer these platforms):\n${profiles.join("\n")}` : ""}
 
 Relevant memory:
 ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
@@ -62,9 +70,37 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
     response_format: zodResponseFormat(SocialDraftSchema, "social_post"),
   });
 
-  const draft = completion.choices[0]?.message?.parsed;
-  if (!draft) throw new Error("Social LLM returned no valid post");
+  const parsedDraft = completion.choices[0]?.message?.parsed;
+  if (!parsedDraft) throw new Error("Social LLM returned no valid post");
   const usage = usageFrom(completion.usage);
+
+  // Generate the accompanying image when requested; a failed/unconfigured
+  // image pipeline degrades to a caption-only post rather than failing.
+  const draft: SocialDraft = { ...parsedDraft };
+  if (payload?.withImage) {
+    if (imageStorageConfigured()) {
+      try {
+        draft.imageUrl = await generateAndStoreImage({
+          companyId: company.id,
+          prompt: `${parsedDraft.imagePrompt}. Brand voice: ${company.brandVoice ?? "clean, modern"}.`,
+        });
+      } catch (err) {
+        await logActivity({
+          companyId: company.id,
+          agent: "SOCIAL",
+          action: `Image generation failed — continuing with caption only (${String(err).slice(0, 120)})`,
+          taskId,
+        });
+      }
+    } else {
+      await logActivity({
+        companyId: company.id,
+        agent: "SOCIAL",
+        action: "Image requested but image storage is not configured — caption-only post drafted",
+        taskId,
+      });
+    }
+  }
 
   if (company.autonomyLevel === "FULL_AUTO") {
     return publishPost(taskId, company.id, draft, usage);
@@ -73,7 +109,7 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
     task,
     kind: "SOCIAL_POST",
     draft,
-    summary: `${draft.platform} post — "${draft.text.slice(0, 80)}"`,
+    summary: `${draft.platform} post${draft.imageUrl ? " (with image)" : ""} — "${draft.text.slice(0, 80)}"`,
     usage,
   });
 }
@@ -103,8 +139,8 @@ async function publishPost(
     companyId,
     agent: "SOCIAL",
     action: integration
-      ? `Published to ${post.platform}: "${post.text.slice(0, 100)}"`
-      : `Post approved for ${post.platform} — connect a social integration to auto-publish: "${post.text.slice(0, 100)}"`,
+      ? `Published to ${post.platform}${post.imageUrl ? " with image" : ""}: "${post.text.slice(0, 100)}"`
+      : `Post${post.imageUrl ? " + image" : ""} ready for ${post.platform} — copy it (image link in details) or connect a social integration to auto-publish: "${post.text.slice(0, 100)}"`,
     taskId,
     usage,
     detail: { post },

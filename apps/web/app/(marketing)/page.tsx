@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 
 const DEMO_FEED = [
@@ -100,17 +100,17 @@ export default function LandingPage() {
       <section id="pricing" className="mx-auto max-w-6xl px-6 pb-24">
         <h2 className="mb-10 text-center text-3xl font-bold">Pricing</h2>
 
-        {trialAvailable() && (
+        {(
           <Card className="mb-8 border-brand-500">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-semibold">Limited-time trial</h3>
-                  <Badge>Till 15 July</Badge>
+                  <Badge>{TRIAL_DAYS}-day trial</Badge>
                 </div>
                 <p className="mt-1 text-sm text-ink-400">
-                  Everything in Pro for a one-time {formatINR(TRIAL_PRICE_PAISE)} — no mandate,
-                  no auto-renewal. Offer and access end 15 July.
+                  Everything in Pro for {TRIAL_DAYS} days — one-time {formatINR(TRIAL_PRICE_PAISE)},
+                  no mandate, no auto-renewal.
                 </p>
               </div>
               <Link href="/login">
@@ -120,8 +120,8 @@ export default function LandingPage() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {(["FREE", "PRO", "SCALE"] as const).map((tier) => {
+        <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
+          {(["FREE", "PRO"] as const).map((tier) => {
             const plan = PLANS[tier];
             return (
               <Card key={tier} className={tier === "PRO" ? "border-brand-500" : ""}>

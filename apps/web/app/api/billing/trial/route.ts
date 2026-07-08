@@ -1,24 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma, grantWelcomeCredits } from "@adventure/db";
-import { PLANS, TRIAL_PRICE_PAISE, trialAvailable } from "@adventure/core";
+import { PLANS, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
 
 const Input = z.object({ slug: z.string() });
 
 /**
- * Create a Razorpay Order for the ₹10 limited-time trial. The webhook's
+ * Create a Razorpay Order for the 15-day trial. The webhook's
  * payment.captured handler activates the trial (notes.type = "trial"), so a
  * lost checkout callback can't lose a purchase. One-time payment — no mandate.
  */
 export async function POST(request: Request) {
   const user = await getUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-
-  if (!trialAvailable()) {
-    return NextResponse.json({ error: "The trial offer has ended" }, { status: 410 });
-  }
 
   const parsed = Input.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -48,6 +44,7 @@ export async function POST(request: Request) {
           planTier: "TRIAL",
           taskCyclesPerDay: plan.taskCyclesPerDay,
           status: "PROVISIONING",
+          trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
           lapsedAt: null,
         },
       }),

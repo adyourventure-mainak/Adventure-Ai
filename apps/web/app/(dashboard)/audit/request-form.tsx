@@ -71,6 +71,10 @@ export function AuditRequestForm() {
         <Button type="submit" disabled={loading || !websiteUrl}>
           {loading ? "Researching your business… (~1 min)" : "Generate audit"}
         </Button>
+        <p className="text-xs text-ink-400">
+          Your website's public content is processed by AI to produce this report, per our{" "}
+          <a href="/privacy" className="underline hover:text-white" target="_blank">Privacy Policy</a>.
+        </p>
         {error && <p className="text-sm text-red-400">{error}</p>}
       </form>
     </Card>

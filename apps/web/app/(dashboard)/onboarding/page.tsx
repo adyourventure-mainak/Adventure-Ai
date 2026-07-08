@@ -85,7 +85,9 @@ export default function OnboardingPage() {
             className="mt-1 w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
           />
           <p className="mt-1 text-xs text-ink-400">
-            Adds a WhatsApp chat button to your company's website. Include the country code.
+            Adds a WhatsApp chat button to your company's website (it will be publicly visible
+            there). Include the country code. Stored per our{" "}
+            <a href="/privacy" className="underline hover:text-white" target="_blank">Privacy Policy</a>.
           </p>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">

@@ -242,6 +242,7 @@ ${copy.features
       <div><label for="email">Email</label><input id="email" name="email" type="email" required maxlength="200" /></div>
       <div><label for="message">Message</label><textarea id="message" name="message" rows="5" required minlength="5" maxlength="4000"></textarea></div>
       <div><button type="submit">Send message</button></div>
+      <p class="form-note">Your details are used only to reply to you, and are shared only with ${esc(companyName)}.</p>
       <p class="form-note" id="form-note"></p>
     </form>
   </section>

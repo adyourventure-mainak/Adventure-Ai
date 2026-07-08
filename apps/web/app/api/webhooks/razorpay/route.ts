@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Prisma, prisma, grantCredits, grantWelcomeCredits } from "@adventure/db";
-import { PLANS, REVENUE_SHARE_PERCENT } from "@adventure/core";
+import { PLANS, REVENUE_SHARE_PERCENT, TRIAL_DAYS } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 
 // Razorpay webhook receiver. Signature-verified, idempotent via the
@@ -163,8 +163,8 @@ async function handleEvent(event: {
         return;
       }
 
-      // Limited-time ₹10 trial: one-time payment unlocks Pro-level access
-      // until TRIAL_ENDS_AT (the worker scheduler lapses expired trials).
+      // Trial: one-time payment unlocks Pro-level access for TRIAL_DAYS days
+      // (the worker scheduler lapses trials past Company.trialEndsAt).
       if (payment.notes?.type === "trial" && payment.notes.companyId) {
         const plan = PLANS.TRIAL;
         await prisma.$transaction([
@@ -174,6 +174,7 @@ async function handleEvent(event: {
               planTier: "TRIAL",
               taskCyclesPerDay: plan.taskCyclesPerDay,
               status: "PROVISIONING",
+              trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
               lapsedAt: null,
             },
           }),
@@ -181,7 +182,7 @@ async function handleEvent(event: {
             data: {
               companyId: payment.notes.companyId,
               agent: "FINANCE",
-              action: "Trial payment received — Trial plan active till 15 July",
+              action: `Trial payment received — Trial plan active for ${TRIAL_DAYS} days`,
             },
           }),
         ]);

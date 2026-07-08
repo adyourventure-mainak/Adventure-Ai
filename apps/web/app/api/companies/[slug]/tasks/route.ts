@@ -5,10 +5,13 @@ import { getUser } from "@/lib/auth";
 
 const Input = z.object({
   instruction: z.string().min(10).max(2000),
+  agent: z.enum(["ENGINEER", "SOCIAL"]).default("ENGINEER"),
+  withImage: z.boolean().default(false),
 });
 
 /**
- * On-demand task: the user asks the Engineer for a change outside the included
+ * On-demand task: the user asks the Engineer for a site change, or the Social
+ * agent for a post (optionally with a generated image), outside the included
  * daily cycle. Costs 1 credit; auto-refunded by the worker if the task fails.
  */
 export async function POST(request: Request, { params }: { params: { slug: string } }) {
@@ -35,16 +38,19 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   }
 
   const title = parsed.data.instruction.slice(0, 80);
+  const isSocial = parsed.data.agent === "SOCIAL";
   const task = await prisma.task.create({
     data: {
       companyId: company.id,
-      agent: "ENGINEER",
-      type: "landing_page_edit",
+      agent: parsed.data.agent,
+      type: isSocial ? "social_post" : "landing_page_edit",
       title,
       source: "ON_DEMAND",
       status: "PENDING",
       creditsCost: 1,
-      payload: { instruction: parsed.data.instruction, requestedBy: user.email },
+      payload: isSocial
+        ? { topic: parsed.data.instruction, withImage: parsed.data.withImage, requestedBy: user.email }
+        : { instruction: parsed.data.instruction, requestedBy: user.email },
     },
   });
 
