@@ -7,7 +7,6 @@ import { Badge, Button, Card } from "@/components/ui";
 import { ActivityFeed } from "@/components/activity-feed";
 import { RequestTask } from "@/components/request-task";
 import { ForwardSupport } from "@/components/forward-support";
-import { SocialProfiles } from "@/components/social-profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +44,15 @@ export default async function CompanyPage({ params }: { params: { slug: string }
   const deployedUrl = company.landingPage?.deployedUrl;
   const repo = company.provisions.find((p) => p.resource === "GITHUB_REPO" && p.status === "DONE");
   const credits = isFree ? 0 : await creditBalance(company.id);
+
+  const recentPosts = isFree
+    ? []
+    : await prisma.task.findMany({
+        where: { companyId: company.id, agent: "SOCIAL", status: "COMPLETED" },
+        orderBy: { completedAt: "desc" },
+        take: 4,
+        select: { id: true, completedAt: true, result: true },
+      });
 
   return (
     <div className="space-y-8">
@@ -153,17 +161,6 @@ export default async function CompanyPage({ params }: { params: { slug: string }
             </p>
             <ForwardSupport slug={company.slug} />
           </Card>
-          <Card>
-            <h2 className="font-semibold">Social profiles</h2>
-            <p className="mb-4 mt-1 text-sm text-ink-400">
-              Add your Facebook and Instagram so the Social agent posts for the right platforms.
-            </p>
-            <SocialProfiles
-              slug={company.slug}
-              initialFacebook={company.facebookUrl}
-              initialInstagram={company.instagramUrl}
-            />
-          </Card>
         </div>
       )}
 
@@ -200,6 +197,55 @@ export default async function CompanyPage({ params }: { params: { slug: string }
           )}
         </Card>
       </div>
+
+      {recentPosts.length > 0 && (
+        <Card>
+          <h2 className="font-semibold">Social posts</h2>
+          <p className="mt-1 text-sm text-ink-400">
+            Approved posts, ready to use — download the image and copy the caption.
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            {recentPosts.map((t) => {
+              const post = (t.result as { post?: { platform?: string; text?: string; hashtags?: string[]; imageUrl?: string } } | null)?.post;
+              if (!post?.text) return null;
+              return (
+                <div key={t.id} className="rounded-lg border border-ink-800 p-4">
+                  <div className="flex items-start gap-4">
+                    {post.imageUrl && (
+                      <div className="shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={post.imageUrl}
+                          alt="Post image"
+                          className="aspect-square w-28 rounded-lg border border-ink-800 object-cover"
+                        />
+                        <a
+                          href={`${post.imageUrl}?download=post-image.jpg`}
+                          className="mt-1 block text-center text-xs text-brand-400 hover:underline"
+                        >
+                          ⬇ Download
+                        </a>
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="whitespace-pre-wrap text-sm text-ink-100">{post.text}</p>
+                      {post.hashtags && post.hashtags.length > 0 && (
+                        <p className="mt-2 flex flex-wrap gap-2">
+                          {post.hashtags.map((h) => (
+                            <span key={h} className="rounded-full border border-ink-800 px-2 py-0.5 text-xs text-ink-400">
+                              #{h}
+                            </span>
+                          ))}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <h2 className="font-semibold">30-day launch plan</h2>

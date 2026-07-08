@@ -29,7 +29,7 @@ function editableField(draft: Record<string, unknown>): string | null {
   return null;
 }
 
-const HIDDEN_FIELDS = new Set(["customerFact"]);
+const HIDDEN_FIELDS = new Set(["customerFact", "imagePrompt"]);
 
 export function ApprovalCard({ slug, item }: { slug: string; item: ApprovalItem }) {
   const router = useRouter();
@@ -86,6 +86,29 @@ export function ApprovalCard({ slug, item }: { slug: string; item: ApprovalItem 
                   value={edited}
                   onChange={(e) => setEdited(e.target.value)}
                 />
+              ) : k === "imageUrl" && typeof v === "string" ? (
+                <dd className="mt-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={v}
+                    alt="Generated post image"
+                    className="aspect-square w-48 rounded-lg border border-ink-800 object-cover"
+                  />
+                  <a
+                    href={`${v}?download=post-image.jpg`}
+                    className="mt-2 inline-block text-xs text-brand-400 hover:underline"
+                  >
+                    ⬇ Download image
+                  </a>
+                </dd>
+              ) : k === "hashtags" && Array.isArray(v) ? (
+                <dd className="mt-1 flex flex-wrap gap-2 text-ink-100">
+                  {v.map((tag) => (
+                    <span key={String(tag)} className="rounded-full border border-ink-800 px-2 py-0.5 text-xs">
+                      #{String(tag)}
+                    </span>
+                  ))}
+                </dd>
               ) : (
                 <dd className="mt-1 whitespace-pre-wrap text-ink-100">
                   {Array.isArray(v) ? v.map(String).join(", ") : String(v)}
