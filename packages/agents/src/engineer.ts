@@ -7,7 +7,7 @@ import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
 import * as github from "./github";
-import { renderLandingHtml } from "./site";
+import { renderSite } from "./site";
 
 const EditResultSchema = z.object({
   updatedCopy: LandingCopySchema,
@@ -71,15 +71,20 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
   const repo = company.provisions.find((p) => p.resource === "GITHUB_REPO" && p.status === "DONE");
   let deployed = false;
   if (repo?.externalId && github.githubConfigured()) {
-    await github.putFile({
-      repoFullName: repo.externalId,
-      path: "index.html",
-      content: renderLandingHtml({
-        companyName: company.name,
-        copy: parsed.updatedCopy as LandingCopy,
-      }),
-      message: `feat: ${parsed.changeSummary.slice(0, 72)}`,
-    });
+    for (const page of renderSite({
+      companyId: company.id,
+      companyName: company.name,
+      ideaSummary: company.ideaSummary,
+      positioning: company.positioning,
+      copy: parsed.updatedCopy as LandingCopy,
+    })) {
+      await github.putFile({
+        repoFullName: repo.externalId,
+        path: page.path,
+        content: page.content,
+        message: `feat: ${parsed.changeSummary.slice(0, 60)} (${page.path})`,
+      });
+    }
     deployed = true;
   }
 

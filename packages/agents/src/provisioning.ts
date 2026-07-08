@@ -4,7 +4,7 @@ import { logActivity } from "./activity";
 import { saveMemory } from "./memory";
 import * as github from "./github";
 import * as vercel from "./vercel";
-import { renderLandingHtml } from "./site";
+import { renderSite } from "./site";
 
 type Resource = "GITHUB_REPO" | "VERCEL_PROJECT" | "DB_SCHEMA" | "EMAIL_IDENTITY" | "RAZORPAY_LINKED_ACCOUNT";
 
@@ -47,12 +47,20 @@ export async function provisionCompany(companyId: string): Promise<void> {
       try {
         const repo = await github.createRepo(company.slug, `${company.name} — built and operated by Adventure AI`);
         if (copy) {
-          await github.putFile({
-            repoFullName: repo.full_name,
-            path: "index.html",
-            content: renderLandingHtml({ companyName: company.name, copy }),
-            message: "chore: initial landing page (Adventure AI Engineer)",
-          });
+          for (const page of renderSite({
+            companyId: company.id,
+            companyName: company.name,
+            ideaSummary: company.ideaSummary,
+            positioning: company.positioning,
+            copy,
+          })) {
+            await github.putFile({
+              repoFullName: repo.full_name,
+              path: page.path,
+              content: page.content,
+              message: `chore: initial site — ${page.path} (Adventure AI Engineer)`,
+            });
+          }
         }
         await github.putFile({
           repoFullName: repo.full_name,
