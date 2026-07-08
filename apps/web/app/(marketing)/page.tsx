@@ -77,6 +77,25 @@ export default function LandingPage() {
         </Card>
       </section>
 
+      {/* Existing-business audit */}
+      <section className="mx-auto max-w-6xl px-6 pb-24">
+        <Card className="border-brand-500">
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <div className="max-w-2xl">
+              <h2 className="text-2xl font-bold">Already running a business?</h2>
+              <p className="mt-2 text-sm text-ink-400">
+                Point us at your website and get market research, a SWOT analysis, the scope for
+                your products or services, and a growth implementation plan from a senior
+                marketing executive — focused on winning more sales and clients.
+              </p>
+            </div>
+            <Link href="/login?next=/audit">
+              <Button size="lg">Get my business audit</Button>
+            </Link>
+          </div>
+        </Card>
+      </section>
+
       {/* Pricing */}
       <section id="pricing" className="mx-auto max-w-6xl px-6 pb-24">
         <h2 className="mb-10 text-center text-3xl font-bold">Pricing</h2>

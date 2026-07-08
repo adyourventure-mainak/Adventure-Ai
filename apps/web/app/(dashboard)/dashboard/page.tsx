@@ -25,9 +25,14 @@ export default async function DashboardPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Your companies</h1>
-        <Link href="/onboarding">
-          <Button>+ New company</Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/audit">
+            <Button variant="outline">Audit my existing business</Button>
+          </Link>
+          <Link href="/onboarding">
+            <Button>+ New company</Button>
+          </Link>
+        </div>
       </div>
 
       {companies.length === 0 ? (

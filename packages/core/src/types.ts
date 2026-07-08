@@ -98,3 +98,54 @@ export const AdPlanSchema = z.object({
   budgetNote: z.string().describe("How to split and pace the monthly ad budget"),
 });
 export type AdPlan = z.infer<typeof AdPlanSchema>;
+
+/** Business audit for an existing business with a website: market research,
+ *  SWOT, product/service scope, and a growth implementation plan. */
+export const BusinessAuditReportSchema = z.object({
+  businessSummary: z.string().describe("What this business does, in 2-3 sentences"),
+  marketResearch: z.object({
+    industryOverview: z.string(),
+    marketSizeAndGrowth: z.string().describe("Realistic figures with India context where relevant"),
+    keyTrends: z.array(z.string()).min(3).max(6),
+    targetSegments: z
+      .array(z.object({ name: z.string(), description: z.string(), whyTheyBuy: z.string() }))
+      .min(2)
+      .max(4),
+    competitiveLandscape: z.string().describe("Who they compete with and how the market is shifting"),
+  }),
+  swot: z.object({
+    strengths: z.array(z.string()).min(3).max(6),
+    weaknesses: z.array(z.string()).min(3).max(6),
+    opportunities: z.array(z.string()).min(3).max(6),
+    threats: z.array(z.string()).min(3).max(6),
+  }),
+  scope: z
+    .array(
+      z.object({
+        offering: z.string().describe("The product or service"),
+        currentPosition: z.string(),
+        expansionOpportunities: z.array(z.string()).min(2).max(4),
+        risks: z.array(z.string()).min(1).max(3),
+      }),
+    )
+    .min(1)
+    .max(5)
+    .describe("Scope assessment per product/service"),
+  implementationPlan: z.object({
+    executiveSummary: z.string().describe("The senior marketing executive's overall recommendation"),
+    quickWins: z.array(z.string()).min(3).max(5).describe("Do these in the first 2 weeks"),
+    phases: z
+      .array(
+        z.object({
+          phase: z.string().describe('e.g. "Month 1: Foundation"'),
+          objective: z.string(),
+          actions: z.array(z.string()).min(3).max(6),
+          expectedOutcome: z.string(),
+        }),
+      )
+      .min(3)
+      .max(4),
+    kpis: z.array(z.object({ metric: z.string(), target: z.string() })).min(3).max(6),
+  }),
+});
+export type BusinessAuditReport = z.infer<typeof BusinessAuditReportSchema>;

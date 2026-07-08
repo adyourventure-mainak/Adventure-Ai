@@ -28,6 +28,12 @@ enum PlanTier {
   SCALE
 }
 
+enum AuditStatus {
+  PENDING
+  READY
+  FAILED
+}
+
 enum SubscriptionStatus {
   CREATED
   AUTHENTICATED
@@ -151,6 +157,7 @@ model User {
   createdAt DateTime @default(now())
 
   companies Company[]
+  audits    BusinessAudit[]
 
   @@map("users")
 }
@@ -395,6 +402,23 @@ model CompanyPlan {
   updatedAt     DateTime @updatedAt
 
   @@map("company_plans")
+}
+
+model BusinessAudit {
+  id          String      @id @default(cuid())
+  userId      String      @db.Uuid
+  user        User        @relation(fields: [userId], references: [id])
+  websiteUrl  String
+  businessName String?
+  notes       String?     @db.Text // what the owner told us about products/services
+  status      AuditStatus @default(READY)
+  report      Json?       // BusinessAuditReport (market research, SWOT, scope, growth plan)
+  error       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@map("business_audits")
 }
 
 model LandingPage {
