@@ -1,6 +1,13 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "web", "runtimeExecutable": "pnpm", "runtimeArgs": ["--filter", "web", "dev"], "port": 3000 }
+    {
+      "name": "web",
+      "runtimeExecutable": "/Users/adventure/Claude/Projects/Polsia/apps/web/node_modules/.bin/next",
+      "runtimeArgs": ["dev"],
+      "cwd": "/Users/adventure/Claude/Projects/Polsia/apps/web",
+      "port": 3000,
+      "autoPort": true
+    }
   ]
 }

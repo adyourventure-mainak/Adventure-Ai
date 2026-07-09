@@ -4,6 +4,7 @@ import { PLANS, TRIAL_DAYS, TRIAL_PRICE_PAISE, formatINR } from "@adventure/core
 import { requireUser } from "@/lib/auth";
 import { Badge, Button, Card } from "@/components/ui";
 import { DeleteAccount } from "@/components/delete-account";
+import { CompanyCards } from "@/components/company-cards";
 
 export const dynamic = "force-dynamic";
 
@@ -101,22 +102,15 @@ export default async function DashboardPage() {
           </Link>
         </Card>
       ) : (
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {companies.map((c) => (
-            <Link key={c.id} href={`/c/${c.slug}`}>
-              <Card className="h-full transition-colors hover:border-brand-500">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">{c.name}</h2>
-                  <Badge variant={c.status === "ACTIVE" ? "success" : "outline"}>
-                    {STATUS_LABEL[c.status] ?? c.status}
-                  </Badge>
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm text-ink-400">{c.positioning}</p>
-                <p className="mt-4 text-xs text-ink-400">Plan: {c.planTier}</p>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <CompanyCards
+          companies={companies.map((c) => ({
+            name: c.name,
+            slug: c.slug,
+            status: c.status,
+            planTier: c.planTier,
+            positioning: c.positioning ?? "",
+          }))}
+        />
       )}
 
       <DeleteAccount />
