@@ -50,7 +50,7 @@ export async function generateAndStoreImage(params: {
   // No response_format param — newer image models reject it. Handle both
   // shapes: b64_json (gpt-image-1 default) and a temporary URL (dall-e-3).
   const result = await openai().images.generate({
-    model: process.env.OPENAI_IMAGE_MODEL || "dall-e-3",
+    model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
     prompt: params.prompt,
     size: "1024x1024",
     n: 1,
