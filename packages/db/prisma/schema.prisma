@@ -174,7 +174,8 @@ model Company {
   autonomyLevel AutonomyLevel @default(APPROVE_OUTBOUND)
 
   // Contact & social
-  phone        String? // WhatsApp contact number (E.164, e.g. +919876543210)
+  phone          String?   // WhatsApp contact number (E.164, e.g. +919876543210)
+  phoneConsentAt DateTime? // DPDP: when the owner consented to storing/displaying the number
   facebookUrl  String?
   instagramUrl String?
 

@@ -58,6 +58,9 @@ export const CreateCompanyInput = z.object({
   // WhatsApp contact number for the generated site (optional). Loosely
   // validated here; the API normalizes to E.164.
   phone: z.string().max(20).optional(),
+  // DPDP: explicit consent to store & display the phone number. Required
+  // when a phone is provided; the API stamps Company.phoneConsentAt.
+  phoneConsent: z.boolean().default(false),
 });
 
 /** Design tokens type (from CompanyFoundationSchema.design), stored on Company.theme. */

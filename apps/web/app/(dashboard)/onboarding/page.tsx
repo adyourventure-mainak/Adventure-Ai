@@ -16,6 +16,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [idea, setIdea] = useState("");
   const [phone, setPhone] = useState("");
+  const [phoneConsent, setPhoneConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +33,7 @@ export default function OnboardingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          surprise ? { surprise: true, phone } : { idea, phone },
+          surprise ? { surprise: true, phone, phoneConsent } : { idea, phone, phoneConsent },
         ),
       });
       const data = await res.json();
@@ -86,9 +87,24 @@ export default function OnboardingPage() {
           />
           <p className="mt-1 text-xs text-ink-400">
             Adds a WhatsApp chat button to your company's website (it will be publicly visible
-            there). Include the country code. Stored per our{" "}
-            <a href="/privacy" className="underline hover:text-white" target="_blank">Privacy Policy</a>.
+            there). Include the country code.
           </p>
+          <label className="mt-2 flex items-start gap-2 text-xs text-ink-400">
+            <input
+              type="checkbox"
+              checked={phoneConsent}
+              onChange={(e) => setPhoneConsent(e.target.checked)}
+              className="mt-0.5"
+            />
+            <span>
+              I consent to Adventure AI storing this number and displaying it on my company
+              website, as described in the{" "}
+              <a href="/privacy" className="underline hover:text-white" target="_blank">
+                Privacy Policy
+              </a>
+              . You can withdraw consent anytime by deleting your account.
+            </span>
+          </label>
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <Button className="flex-1" disabled={idea.trim().length < 10} onClick={() => create(false)}>

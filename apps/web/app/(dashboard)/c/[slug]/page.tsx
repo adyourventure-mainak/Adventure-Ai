@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma, creditBalance } from "@adventure/db";
 import type { CompanyFoundation } from "@adventure/core";
 import { requireUser } from "@/lib/auth";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
 import { ActivityFeed } from "@/components/activity-feed";
 import { RequestTask } from "@/components/request-task";
 import { ForwardSupport } from "@/components/forward-support";
@@ -29,25 +29,23 @@ export default async function CompanyPage({ params }: { params: { slug: string }
       landingPage: true,
       activityLogs: { orderBy: { createdAt: "desc" }, take: 20 },
       tasks: { orderBy: { createdAt: "desc" }, take: 8 },
-      approvals: { where: { status: "PENDING" }, select: { id: true } },
       dailyBriefs: { orderBy: { date: "desc" }, take: 1 },
       subscription: true,
       provisions: true,
     },
   });
   if (!company || company.ownerId !== user.id) notFound();
+  // Free companies see only the subscription options.
+  if (company.planTier === "FREE") redirect(`/c/${company.slug}/billing`);
 
   const copy = (company.landingPage?.copy ?? null) as CompanyFoundation["landingCopy"] | null;
   const plan = (company.plan?.thirtyDayPlan ?? []) as CompanyFoundation["thirtyDayPlan"];
-  const isFree = company.planTier === "FREE";
   const brief = company.dailyBriefs[0];
   const deployedUrl = company.landingPage?.deployedUrl;
   const repo = company.provisions.find((p) => p.resource === "GITHUB_REPO" && p.status === "DONE");
-  const credits = isFree ? 0 : await creditBalance(company.id);
+  const credits = await creditBalance(company.id);
 
-  const recentPosts = isFree
-    ? []
-    : await prisma.task.findMany({
+  const recentPosts = await prisma.task.findMany({
         where: { companyId: company.id, agent: "SOCIAL", status: "COMPLETED" },
         orderBy: { completedAt: "desc" },
         take: 4,
@@ -65,41 +63,17 @@ export default async function CompanyPage({ params }: { params: { slug: string }
           <Link href={`/c/${company.slug}/plan`}>
             <Badge variant="outline" className="cursor-pointer">Growth plan</Badge>
           </Link>
-          {!isFree && (
-            <Link href={`/c/${company.slug}/approvals`}>
-              <Badge
-                variant={company.approvals.length > 0 ? "default" : "outline"}
-                className="cursor-pointer"
-              >
-                {company.approvals.length > 0
-                  ? `${company.approvals.length} awaiting approval`
-                  : "Approvals"}
-              </Badge>
-            </Link>
-          )}
-          {!isFree && <Badge variant="outline">{credits} credits</Badge>}
+          <Link href={`/c/${company.slug}/inbox`}>
+            <Badge variant="default" className="cursor-pointer">Inbox</Badge>
+          </Link>
+          <Badge variant="outline">{credits} credits</Badge>
           <Badge variant={company.status === "ACTIVE" ? "success" : "outline"}>
             {company.status}
           </Badge>
-          {isFree && (
-            <Link href={`/c/${company.slug}/billing`}>
-              <Button>Upgrade to Pro — switch agents on</Button>
-            </Link>
-          )}
         </div>
       </div>
 
-      {isFree && (
-        <Card className="border-brand-500/40 bg-brand-500/5">
-          <p className="text-sm">
-            <strong>Preview mode.</strong> Your company foundation is ready. Upgrade to Pro to
-            deploy the landing page, provision your GitHub repo, and start the autonomous daily
-            cycle.
-          </p>
-        </Card>
-      )}
-
-      {(deployedUrl || repo || !isFree) && (
+      {(
         <Card className="flex flex-wrap items-center gap-4 py-4">
           {deployedUrl && (
             <a href={deployedUrl} target="_blank" className="text-sm text-brand-400 hover:underline">
@@ -115,19 +89,15 @@ export default async function CompanyPage({ params }: { params: { slug: string }
               ↗ Your code: github.com/{repo.externalId}
             </a>
           )}
-          {!isFree && (
-            <>
-              <Link href={`/live/${company.slug}`} className="text-sm text-brand-400 hover:underline">
-                ↗ Public feed
-              </Link>
-              <a
-                href={`/api/companies/${company.slug}/export`}
-                className="text-sm text-ink-400 hover:text-white hover:underline"
-              >
-                ⤓ Download your data
-              </a>
-            </>
-          )}
+          <Link href={`/live/${company.slug}`} className="text-sm text-brand-400 hover:underline">
+            ↗ Public feed
+          </Link>
+          <a
+            href={`/api/companies/${company.slug}/export`}
+            className="text-sm text-ink-400 hover:text-white hover:underline"
+          >
+            ⤓ Download your data
+          </a>
         </Card>
       )}
 
@@ -143,7 +113,7 @@ export default async function CompanyPage({ params }: { params: { slug: string }
         </Card>
       )}
 
-      {!isFree && (
+      {(
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <h2 className="font-semibold">Ask your agents</h2>
@@ -200,9 +170,14 @@ export default async function CompanyPage({ params }: { params: { slug: string }
 
       {recentPosts.length > 0 && (
         <Card>
-          <h2 className="font-semibold">Social posts</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Social posts</h2>
+            <Link href={`/c/${company.slug}/inbox`} className="text-sm text-brand-400 hover:underline">
+              View all in Inbox →
+            </Link>
+          </div>
           <p className="mt-1 text-sm text-ink-400">
-            Approved posts, ready to use — download the image and copy the caption.
+            Ready to use — download the image and copy the caption, or share via the Inbox.
           </p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {recentPosts.map((t) => {

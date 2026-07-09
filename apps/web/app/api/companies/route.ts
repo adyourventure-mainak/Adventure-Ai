@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { idea, surprise, phone } = parsed.data;
+  const { idea, surprise, phone, phoneConsent } = parsed.data;
   if (!surprise && (!idea || idea.trim().length < 10)) {
     return NextResponse.json(
       { error: "Describe your idea in at least a sentence, or use Surprise me." },
@@ -42,6 +42,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Enter a valid WhatsApp number with country code." }, { status: 400 });
     }
     normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
+    // DPDP: storing/displaying the number requires explicit consent.
+    if (!phoneConsent) {
+      return NextResponse.json(
+        { error: "Please tick the consent box to store your WhatsApp number, or leave it blank." },
+        { status: 400 },
+      );
+    }
   }
 
   // Per-owner company cap, scaled by the best plan tier they hold
@@ -83,6 +90,7 @@ export async function POST(request: Request) {
       name: foundation.companyName,
       slug: slugify(foundation.companyName),
       phone: normalizedPhone,
+      phoneConsentAt: normalizedPhone ? new Date() : null,
       ideaSummary: foundation.ideaSummary,
       positioning: foundation.positioning,
       brandVoice: foundation.brandVoice,

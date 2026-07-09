@@ -46,6 +46,26 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
         }
       }
 
+      // 0b. The approval step was removed — deliverables now ship straight to
+      // the inbox. Auto-approve any drafts still parked from before and
+      // requeue their tasks so the runners resume at the ship step.
+      {
+        const parked = await prisma.approval.findMany({
+          where: { status: "PENDING", task: { status: "AWAITING_APPROVAL" } },
+          select: { id: true, taskId: true },
+          take: 50,
+        });
+        for (const a of parked) {
+          await prisma.$transaction([
+            prisma.approval.update({
+              where: { id: a.id },
+              data: { status: "APPROVED", decidedAt: new Date() },
+            }),
+            prisma.task.update({ where: { id: a.taskId }, data: { status: "PENDING" } }),
+          ]);
+        }
+      }
+
       // 1. Provisioning
       const provisioning = await prisma.company.findMany({
         where: { status: "PROVISIONING" },

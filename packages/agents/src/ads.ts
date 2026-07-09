@@ -5,7 +5,7 @@ import { openai, model, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
-import { requestApproval, approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
+import { approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
 
 export const AdCampaignDraftSchema = z.object({
   platform: z.enum(["google", "meta"]),
@@ -92,13 +92,9 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
   // Hard clamp regardless of what the LLM proposed.
   draft.dailyBudgetRupees = Math.min(Math.max(1, draft.dailyBudgetRupees), maxDailyRupees);
 
-  await requestApproval({
-    task,
-    kind: "AD_BUDGET_CHANGE",
-    draft,
-    summary: `${draft.platform} campaign at ₹${draft.dailyBudgetRupees}/day — "${draft.headline}"`,
-    usage,
-  });
+  // Campaign proposal ships straight to the company inbox. No spend can
+  // happen until an ad account is linked, and the budget stays clamped.
+  return launchCampaign(taskId, company.id, draft, usage);
 }
 
 /**

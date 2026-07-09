@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@adventure/db";
+import { PLANS, TRIAL_DAYS, TRIAL_PRICE_PAISE, formatINR } from "@adventure/core";
 import { requireUser } from "@/lib/auth";
 import { Badge, Button, Card } from "@/components/ui";
+import { DeleteAccount } from "@/components/delete-account";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,51 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, slug: true, status: true, planTier: true, positioning: true },
   });
+
+  const hasPaid = companies.some((c) => c.planTier !== "FREE");
+
+  // Free users see only the subscription options — full account access is a
+  // paid (or trial) feature. They still need a company to attach a plan to.
+  if (companies.length > 0 && !hasPaid) {
+    const first = companies[0];
+    return (
+      <div className="mx-auto max-w-2xl">
+        <h1 className="text-2xl font-bold">Choose a plan to unlock your account</h1>
+        <p className="mt-2 text-sm text-ink-400">
+          Your company <strong>{first.name}</strong> is founded and waiting. Pick a plan to switch
+          your AI agents on and access the dashboard.
+        </p>
+        <Card className="mt-8 border-brand-500">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">{TRIAL_DAYS}-day trial</h2>
+              <p className="mt-1 text-sm text-ink-400">
+                Everything in Pro — one-time {formatINR(TRIAL_PRICE_PAISE)}, no auto-renewal.
+              </p>
+            </div>
+            <Link href={`/c/${first.slug}/billing`}>
+              <Button>Try for {formatINR(TRIAL_PRICE_PAISE)}</Button>
+            </Link>
+          </div>
+        </Card>
+        <Card className="mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">{PLANS.PRO.name}</h2>
+              <p className="mt-1 text-sm text-ink-400">
+                {formatINR(PLANS.PRO.pricePaise)}/mo — full autonomous daily cycle, deployed
+                website, and 8 welcome credits.
+              </p>
+            </div>
+            <Link href={`/c/${first.slug}/billing`}>
+              <Button variant="outline">Subscribe</Button>
+            </Link>
+          </div>
+        </Card>
+        <DeleteAccount />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -64,6 +111,8 @@ export default async function DashboardPage() {
           ))}
         </div>
       )}
+
+      <DeleteAccount />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { openai, model, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
-import { requestApproval, approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
+import { approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
 import { generateAndStoreImage, imageStorageConfigured } from "./images";
 
 export const SocialDraftSchema = z.object({
@@ -102,16 +102,8 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
     }
   }
 
-  if (company.autonomyLevel === "FULL_AUTO") {
-    return publishPost(taskId, company.id, draft, usage);
-  }
-  await requestApproval({
-    task,
-    kind: "SOCIAL_POST",
-    draft,
-    summary: `${draft.platform} post${draft.imageUrl ? " (with image)" : ""} — "${draft.text.slice(0, 80)}"`,
-    usage,
-  });
+  // Deliverables ship straight to the company inbox — no approval step.
+  return publishPost(taskId, company.id, draft, usage);
 }
 
 /**

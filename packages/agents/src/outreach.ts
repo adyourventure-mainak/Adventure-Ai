@@ -5,7 +5,7 @@ import { openai, model, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
-import { requestApproval, approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
+import { approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
 
 export const OutreachDraftSchema = z.object({
   audience: z.string().describe("Who this email targets, in one line"),
@@ -68,13 +68,9 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
   if (!draft) throw new Error("Outreach LLM returned no valid email");
   const usage = usageFrom(completion.usage);
 
-  await requestApproval({
-    task,
-    kind: "OUTBOUND_EMAIL",
-    draft,
-    summary: `outreach email to ${draft.audience} — "${draft.subject}"`,
-    usage,
-  });
+  // Draft ships straight to the company inbox as a ready-to-send email —
+  // nothing is actually sent until an email integration is connected.
+  return sendOutreach(taskId, company.id, draft, usage);
 }
 
 /**

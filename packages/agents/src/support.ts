@@ -5,7 +5,7 @@ import { openai, model, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
-import { requestApproval, approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
+import { approvedContent, resumePhase, cancelRejectedTask } from "./approvals";
 
 export const SupportDraftSchema = z.object({
   reply: z.string().describe("The reply to the customer, ready to send. Warm, direct, on-brand."),
@@ -74,16 +74,6 @@ ${memories.map((m) => `- [${m.agent}/${m.kind}] ${m.content}`).join("\n") || "(n
   if (!draft) throw new Error("Support LLM returned no valid reply");
   const usage = usageFrom(completion.usage);
 
-  if (company.autonomyLevel === "APPROVE_EVERYTHING") {
-    await requestApproval({
-      task,
-      kind: "OUTBOUND_EMAIL",
-      draft: { ...draft, ...payload },
-      summary: `support reply to "${payload.customerMessage.slice(0, 60)}"`,
-      usage,
-    });
-    return;
-  }
   await sendReply(taskId, company.id, payload, draft, usage);
 }
 
