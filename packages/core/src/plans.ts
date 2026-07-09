@@ -6,8 +6,10 @@ export type PlanTier = "FREE" | "TRIAL" | "PRO" | "SCALE";
 
 // Trial: one-time payment unlocks Pro-level access for TRIAL_DAYS days
 // (per-company expiry stored on Company.trialEndsAt).
-export const TRIAL_PRICE_PAISE = 59900;
-export const TRIAL_DAYS = 15;
+export const TRIAL_PRICE_PAISE = 99900;
+export const TRIAL_DAYS = 7;
+// Every new company starts with a free trial before any payment is asked.
+export const FREE_TRIAL_DAYS = 2;
 
 export interface PlanDef {
   tier: PlanTier;

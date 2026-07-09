@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE, FREE_TRIAL_DAYS } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 
 const DEMO_FEED = [
@@ -105,16 +105,17 @@ export default function LandingPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-semibold">Limited-time trial</h3>
-                  <Badge>{TRIAL_DAYS}-day trial</Badge>
+                  <h3 className="text-xl font-semibold">Start with {FREE_TRIAL_DAYS} days free</h3>
+                  <Badge>free trial</Badge>
                 </div>
                 <p className="mt-1 text-sm text-ink-400">
-                  Everything in Pro for {TRIAL_DAYS} days — one-time {formatINR(TRIAL_PRICE_PAISE)},
-                  no mandate, no auto-renewal.
+                  Every new company starts with a {FREE_TRIAL_DAYS}-day free trial — everything
+                  unlocked, no payment needed. Then continue with a {TRIAL_DAYS}-day limited trial
+                  (one-time {formatINR(TRIAL_PRICE_PAISE)}, no auto-renewal) or go Pro.
                 </p>
               </div>
               <Link href="/login">
-                <Button>Try for {formatINR(TRIAL_PRICE_PAISE)}</Button>
+                <Button>Start free trial</Button>
               </Link>
             </div>
           </Card>

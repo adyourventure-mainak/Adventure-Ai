@@ -35,8 +35,10 @@ export default async function CompanyPage({ params }: { params: { slug: string }
     },
   });
   if (!company || company.ownerId !== user.id) notFound();
-  // Free companies see only the subscription options.
-  if (company.planTier === "FREE") redirect(`/c/${company.slug}/billing`);
+  // Unpaid companies (legacy Free, or an expired trial) see only billing.
+  const trialExpired =
+    company.planTier === "TRIAL" && company.trialEndsAt && company.trialEndsAt < new Date();
+  if (company.planTier === "FREE" || trialExpired) redirect(`/c/${company.slug}/billing`);
 
   const copy = (company.landingPage?.copy ?? null) as CompanyFoundation["landingCopy"] | null;
   const plan = (company.plan?.thirtyDayPlan ?? []) as CompanyFoundation["thirtyDayPlan"];

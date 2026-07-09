@@ -8,7 +8,7 @@ import { getUser } from "@/lib/auth";
 const Input = z.object({ slug: z.string() });
 
 /**
- * Create a Razorpay Order for the 15-day trial. The webhook's
+ * Create a Razorpay Order for the paid trial (TRIAL_DAYS days). The webhook's
  * payment.captured handler activates the trial (notes.type = "trial"), so a
  * lost checkout callback can't lose a purchase. One-time payment — no mandate.
  */
@@ -29,8 +29,15 @@ export async function POST(request: Request) {
   if (company.subscription?.status === "ACTIVE") {
     return NextResponse.json({ error: "This company already has an active subscription" }, { status: 409 });
   }
-  if (company.planTier !== "FREE") {
-    return NextResponse.json({ error: "The trial is only for companies on the Free plan" }, { status: 409 });
+  // Eligible: legacy Free companies, or companies whose free/paid trial has
+  // already expired. An active PRO plan (or a still-running trial) is not.
+  const trialActive =
+    company.planTier === "TRIAL" && company.trialEndsAt && company.trialEndsAt > new Date();
+  if (company.planTier === "PRO" || company.planTier === "SCALE" || trialActive) {
+    return NextResponse.json(
+      { error: "This company already has an active plan or running trial" },
+      { status: 409 },
+    );
   }
 
   // BILLING_TEST_MODE=1: activate without payment while Razorpay website

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@adventure/db";
-import { CreateCompanyInput, companyLimitForOwner } from "@adventure/core";
+import { prisma, grantWelcomeCredits } from "@adventure/db";
+import { CreateCompanyInput, companyLimitForOwner, PLANS, FREE_TRIAL_DAYS } from "@adventure/core";
 import { generateCompanyFoundation, slugify, logActivity } from "@adventure/agents";
 import { getUser } from "@/lib/auth";
 
@@ -84,9 +84,15 @@ export async function POST(request: Request) {
   }
   const { foundation, usage } = result;
 
+  // Every new company starts a 2-day free trial: full Pro-level access, the
+  // worker's scheduler lapses it via trialEndsAt, then billing takes over.
   const company = await prisma.company.create({
     data: {
       ownerId: user.id,
+      planTier: "TRIAL",
+      status: "PROVISIONING",
+      taskCyclesPerDay: PLANS.TRIAL.taskCyclesPerDay,
+      trialEndsAt: new Date(Date.now() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000),
       name: foundation.companyName,
       slug: slugify(foundation.companyName),
       phone: normalizedPhone,
@@ -104,6 +110,13 @@ export async function POST(request: Request) {
     select: { id: true, slug: true },
   });
 
+  await grantWelcomeCredits(company.id);
+  await logActivity({
+    companyId: company.id,
+    agent: "FINANCE",
+    action: `Your ${FREE_TRIAL_DAYS}-day free trial has started — everything is unlocked`,
+    isPublic: false,
+  });
   await logActivity({
     companyId: company.id,
     agent: "ORCHESTRATOR",

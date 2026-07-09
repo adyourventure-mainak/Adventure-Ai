@@ -20,10 +20,16 @@ export default async function DashboardPage() {
   const companies = await prisma.company.findMany({
     where: { ownerId: user.id },
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, slug: true, status: true, planTier: true, positioning: true },
+    select: { id: true, name: true, slug: true, status: true, planTier: true, positioning: true, trialEndsAt: true },
   });
 
-  const hasPaid = companies.some((c) => c.planTier !== "FREE");
+  const now = new Date();
+  const hasPaid = companies.some(
+    (c) =>
+      c.planTier === "PRO" ||
+      c.planTier === "SCALE" ||
+      (c.planTier === "TRIAL" && c.trialEndsAt && c.trialEndsAt > now),
+  );
 
   // Free users see only the subscription options — full account access is a
   // paid (or trial) feature. They still need a company to attach a plan to.
@@ -31,17 +37,18 @@ export default async function DashboardPage() {
     const first = companies[0];
     return (
       <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-bold">Choose a plan to unlock your account</h1>
+        <h1 className="text-2xl font-bold">Your free trial has ended</h1>
         <p className="mt-2 text-sm text-ink-400">
-          Your company <strong>{first.name}</strong> is founded and waiting. Pick a plan to switch
-          your AI agents on and access the dashboard.
+          Your company <strong>{first.name}</strong> and everything your agents built are safe.
+          Pick a plan to switch them back on and keep going.
         </p>
         <Card className="mt-8 border-brand-500">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold">{TRIAL_DAYS}-day trial</h2>
+              <h2 className="text-xl font-semibold">{TRIAL_DAYS}-day limited trial</h2>
               <p className="mt-1 text-sm text-ink-400">
-                Everything in Pro — one-time {formatINR(TRIAL_PRICE_PAISE)}, no auto-renewal.
+                Everything in Pro for {TRIAL_DAYS} more days — one-time{" "}
+                {formatINR(TRIAL_PRICE_PAISE)}, no auto-renewal.
               </p>
             </div>
             <Link href={`/c/${first.slug}/billing`}>

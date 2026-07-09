@@ -179,7 +179,7 @@ export default function BillingPage() {
         data export for 90 days.
       </p>
 
-      {status && status.planTier !== "FREE" && (
+      {status && status.planTier !== "FREE" && status.companyStatus !== "LAPSED" && (
         <Card className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -205,17 +205,17 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {status?.planTier === "FREE" && (
+      {status && (status.planTier === "FREE" || (status.planTier === "TRIAL" && status.companyStatus === "LAPSED")) && (
         <Card className="mt-8 border-brand-500">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold">Limited-time trial</h2>
-                <Badge>{TRIAL_DAYS}-day trial</Badge>
+                <h2 className="text-xl font-semibold">Limited trial</h2>
+                <Badge>{TRIAL_DAYS} days</Badge>
               </div>
               <p className="mt-1 text-sm text-ink-400">
-                Everything in Pro for {TRIAL_DAYS} days — one-time {formatINR(TRIAL_PRICE_PAISE)},
-                no mandate, no auto-renewal.
+                Everything in Pro for {TRIAL_DAYS} more days — one-time{" "}
+                {formatINR(TRIAL_PRICE_PAISE)}, no mandate, no auto-renewal.
               </p>
             </div>
             <Button disabled={loadingTier !== null} onClick={startTrial}>

@@ -118,8 +118,8 @@ export default function OnboardingPage() {
       </Card>
 
       <p className="mt-4 text-xs text-ink-400">
-        Free plan: idea, positioning, landing page preview, and a 30-day plan. Upgrade to Pro to
-        deploy it and switch the agents on.
+        Your company starts with a 2-day free trial — agents on, website deployed, everything
+        unlocked. After that, continue with the 7-day limited trial or Pro.
       </p>
     </div>
   );
