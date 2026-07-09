@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   transpilePackages: ["@adventure/core", "@adventure/db", "@adventure/agents"],
   experimental: {
-    serverComponentsExternalPackages: ["@prisma/client", "prisma"],
+    serverComponentsExternalPackages: ["@prisma/client", "prisma", "sharp"],
     // Monorepo: trace server dependencies from the workspace root so the pnpm
     // virtual store is reachable.
     outputFileTracingRoot: path.join(__dirname, "../.."),

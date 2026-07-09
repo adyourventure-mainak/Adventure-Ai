@@ -1,4 +1,3 @@
-import sharp from "sharp";
 import { openai } from "./llm";
 
 // Social post images: generated with OpenAI and stored in a public Supabase
@@ -66,6 +65,10 @@ export async function generateAndStoreImage(params: {
   } else {
     throw new Error("Image generation returned no data");
   }
+
+  // sharp is a native module and only the worker generates images — load it
+  // lazily so importing @adventure/agents never breaks bundled (Vercel) code.
+  const sharp = (await import("sharp")).default;
 
   // Deliverable spec: square 1:1, ~100 KB, downloadable. Re-encode as JPEG,
   // stepping quality down until it fits the budget.
