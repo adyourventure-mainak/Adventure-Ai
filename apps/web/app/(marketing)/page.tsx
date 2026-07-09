@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE, FREE_TRIAL_DAYS } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
+import { GlowCard } from "@/components/ui/spotlight-card";
 
 const DEMO_FEED = [
   { agent: "CEO", action: "Wrote today's brief: focus on landing page conversion + 20 outreach emails" },
   { agent: "Engineer", action: "Opened PR #14: add testimonials section to landing page — merged & deployed" },
   { agent: "Research", action: "Analyzed 3 competitors; pricing gap found at ₹999/mo tier" },
-  { agent: "Email", action: "Drafted 20 personalized outreach emails — awaiting your approval" },
-  { agent: "Social", action: "Scheduled 3 posts for tomorrow (X + LinkedIn)" },
+  { agent: "Email", action: "Drafted 20 personalized outreach emails — ready in your inbox" },
+  { agent: "Social", action: "Generated tomorrow's post: image, caption & tags — ready to share" },
   { agent: "Finance", action: "Weekly P&L: revenue ₹42,300, ad spend ₹6,150, net +₹31,900" },
 ];
 
@@ -18,7 +19,7 @@ const FAQ = [
   },
   {
     q: "Do I stay in control?",
-    a: "Yes. Outbound email requires your approval by default, ads have hard budget caps you set, and you can pause any agent or set autonomy to approve-everything. You can edit any drafted output before it ships.",
+    a: "Yes. Everything the agents produce lands in your inbox as a ready-to-use deliverable — you decide what to publish and send. Ads have hard budget caps you set, and you can pause any agent at any time.",
   },
   {
     q: "Who owns the code and data?",
@@ -30,47 +31,121 @@ const FAQ = [
   },
   {
     q: "What if I don't have an idea?",
-    a: 'Click "Surprise me". The AI generates a validated niche business idea, names the company, writes the positioning and landing page, and drafts a 30-day launch plan — free, no card required.',
+    a: `Click "Surprise me". The AI generates a validated niche business idea, names the company, writes the positioning and landing page, and drafts a 30-day launch plan — your ${FREE_TRIAL_DAYS}-day free trial starts immediately, no card required.`,
+  },
+];
+
+const CheckIcon = () => (
+  <svg
+    className="mt-0.5 h-4 w-4 shrink-0 text-brand-500"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const HERO_PLANS = [
+  {
+    name: "Free trial",
+    price: "₹0",
+    detail: `${FREE_TRIAL_DAYS} days, everything unlocked`,
+  },
+  {
+    name: "Limited trial",
+    price: formatINR(TRIAL_PRICE_PAISE),
+    detail: `${TRIAL_DAYS} days, one-time, no auto-renewal`,
+  },
+  {
+    name: "Pro",
+    price: `${formatINR(PLANS.PRO.pricePaise)}/mo`,
+    detail: "Agents on 24/7, per company",
   },
 ];
 
 export default function LandingPage() {
   return (
     <main>
-      {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 pb-20 pt-24 text-center">
-        <Badge className="mb-6">Autonomous business operations</Badge>
-        <h1 className="mx-auto max-w-3xl text-5xl font-bold leading-tight tracking-tight">
-          AI that runs your company <span className="text-brand-500">while you sleep</span>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg text-ink-100">
-          Adventure AI is an AI co-founder: it plans, builds, markets, and operates your online
-          business 24/7 — with you in control of every important decision.
-        </p>
-        <div className="mt-8 flex justify-center gap-4">
-          <Link href="/login">
-            <Button size="lg">Start free — no card</Button>
-          </Link>
-          <Link href="#pricing">
-            <Button size="lg" variant="outline">See pricing</Button>
-          </Link>
+      {/* Hero — asymmetric split: pitch + plan ladder left, live feed right */}
+      <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-24 pt-20 lg:grid-cols-[7fr_5fr]">
+        <div>
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">
+            Your AI co-founder
+          </p>
+          <h1 className="max-w-xl font-display text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.08] tracking-tight">
+            AI that runs your company{" "}
+            <span className="text-brand-500">while you sleep</span>
+          </h1>
+          <p className="mt-6 max-w-lg text-lg leading-relaxed text-ink-100/80">
+            It plans, builds the website, writes the posts, answers customers, and tracks the
+            money — 24/7, with every deliverable waiting in your inbox.
+          </p>
+
+          {/* Plans, stated up front */}
+          <div className="mt-8 divide-y divide-ink-800 rounded-xl border border-ink-800 bg-ink-900/60">
+            {HERO_PLANS.map((p, i) => (
+              <div key={p.name} className="flex items-baseline gap-4 px-5 py-3">
+                <span className="w-28 shrink-0 text-sm font-semibold">
+                  {p.name}
+                  {i === 2 && <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-brand-400">popular</span>}
+                </span>
+                <span className="w-24 shrink-0 font-display text-lg font-bold">{p.price}</span>
+                <span className="truncate text-sm text-ink-400">{p.detail}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link href="/login">
+              <Button size="lg">Start {FREE_TRIAL_DAYS} days free — no card</Button>
+            </Link>
+            <Link href="#pricing" className="text-sm font-medium text-ink-100 hover:text-white">
+              Compare plans →
+            </Link>
+          </div>
+          <p className="mt-4 text-xs text-ink-400">
+            Plus a {REVENUE_SHARE_PERCENT}% revenue share — we earn when your business does.
+          </p>
         </div>
+
+        {/* Live feed inside the spotlight card — the signature element */}
+        <GlowCard customSize glowColor="orange" className="hidden p-0 lg:block">
+          <div className="flex items-center justify-between border-b border-ink-800 px-5 py-3.5">
+            <h2 className="text-sm font-semibold">Live from a company run by Adventure AI</h2>
+            <Badge variant="success">● live</Badge>
+          </div>
+          <ul className="divide-y divide-ink-800/70">
+            {DEMO_FEED.map((item, i) => (
+              <li key={i} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <Badge variant="outline" className="mt-0.5 w-20 shrink-0 justify-center text-xs">
+                  {item.agent}
+                </Badge>
+                <span className="text-ink-100/90">{item.action}</span>
+              </li>
+            ))}
+          </ul>
+        </GlowCard>
       </section>
 
-      {/* Demo feed */}
-      <section className="mx-auto max-w-4xl px-6 pb-24">
+      {/* Mobile: feed below hero */}
+      <section className="mx-auto max-w-6xl px-6 pb-24 lg:hidden">
         <Card className="p-0">
-          <div className="flex items-center justify-between border-b border-ink-800 px-6 py-4">
-            <h2 className="font-semibold">Live from a company run by Adventure AI</h2>
-            <Badge variant="success">● live demo</Badge>
+          <div className="flex items-center justify-between border-b border-ink-800 px-5 py-3.5">
+            <h2 className="text-sm font-semibold">Live from a company run by Adventure AI</h2>
+            <Badge variant="success">● live</Badge>
           </div>
           <ul className="divide-y divide-ink-800">
             {DEMO_FEED.map((item, i) => (
-              <li key={i} className="flex items-start gap-4 px-6 py-4 text-sm">
-                <Badge variant="outline" className="mt-0.5 shrink-0 w-24 justify-center">
+              <li key={i} className="flex items-start gap-3 px-5 py-3 text-sm">
+                <Badge variant="outline" className="mt-0.5 w-20 shrink-0 justify-center text-xs">
                   {item.agent}
                 </Badge>
-                <span className="text-ink-100">{item.action}</span>
+                <span className="text-ink-100/90">{item.action}</span>
               </li>
             ))}
           </ul>
@@ -79,11 +154,11 @@ export default function LandingPage() {
 
       {/* Existing-business audit */}
       <section className="mx-auto max-w-6xl px-6 pb-24">
-        <Card className="border-brand-500">
+        <Card className="border-brand-500/40">
           <div className="flex flex-wrap items-center justify-between gap-6">
             <div className="max-w-2xl">
-              <h2 className="text-2xl font-bold">Already running a business?</h2>
-              <p className="mt-2 text-sm text-ink-400">
+              <h2 className="font-display text-2xl font-bold">Already running a business?</h2>
+              <p className="mt-2 text-sm leading-relaxed text-ink-400">
                 Point us at your website and get market research, a SWOT analysis, the scope for
                 your products or services, and a growth implementation plan from a senior
                 marketing executive — focused on winning more sales and clients.
@@ -98,64 +173,97 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section id="pricing" className="mx-auto max-w-6xl px-6 pb-24">
-        <h2 className="mb-10 text-center text-3xl font-bold">Pricing</h2>
+        <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-brand-400">
+          Pricing
+        </p>
+        <h2 className="mt-3 text-center font-display text-3xl font-bold">
+          Start free. Pay only to keep going.
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-ink-400">
+          Every company begins with {FREE_TRIAL_DAYS} days completely free — agents on, website
+          deployed, no card. Then pick how you continue.
+        </p>
 
-        {(
-          <Card className="mb-8 border-brand-500">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-semibold">Start with {FREE_TRIAL_DAYS} days free</h3>
-                  <Badge>free trial</Badge>
-                </div>
-                <p className="mt-1 text-sm text-ink-400">
-                  Every new company starts with a {FREE_TRIAL_DAYS}-day free trial — everything
-                  unlocked, no payment needed. Then continue with a {TRIAL_DAYS}-day limited trial
-                  (one-time {formatINR(TRIAL_PRICE_PAISE)}, no auto-renewal) or go Pro.
-                </p>
-              </div>
-              <Link href="/login">
-                <Button>Start free trial</Button>
-              </Link>
+        <div className="mt-12 grid gap-6 md:grid-cols-3">
+          {/* Free trial */}
+          <GlowCard customSize glowColor="orange" className="flex flex-col p-6">
+            <h3 className="font-display text-lg font-semibold">Free trial</h3>
+            <p className="mt-4 font-display text-4xl font-bold">
+              ₹0<span className="text-sm font-normal text-ink-400"> / {FREE_TRIAL_DAYS} days</span>
+            </p>
+            <ul className="mt-6 flex-1 space-y-2.5 text-sm text-ink-100">
+              {[
+                "Starts automatically with every new company",
+                "All nine agents switched on",
+                "Website built and deployed",
+                "8 welcome credits included",
+                "No card, no commitment",
+              ].map((f) => (
+                <li key={f} className="flex gap-2.5">
+                  <CheckIcon /> {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/login" className="mt-6 block">
+              <Button className="w-full" variant="secondary">
+                Start free
+              </Button>
+            </Link>
+          </GlowCard>
+
+          {/* Limited trial */}
+          <GlowCard customSize glowColor="orange" className="flex flex-col p-6">
+            <h3 className="font-display text-lg font-semibold">Limited trial</h3>
+            <p className="mt-4 font-display text-4xl font-bold">
+              {formatINR(TRIAL_PRICE_PAISE)}
+              <span className="text-sm font-normal text-ink-400"> / {TRIAL_DAYS} days</span>
+            </p>
+            <ul className="mt-6 flex-1 space-y-2.5 text-sm text-ink-100">
+              {[
+                `Everything in Pro for ${TRIAL_DAYS} more days`,
+                "One-time payment — UPI or card",
+                "No mandate, no auto-renewal",
+                "Keeps your site, inbox & credits",
+                "Upgrade to Pro anytime",
+              ].map((f) => (
+                <li key={f} className="flex gap-2.5">
+                  <CheckIcon /> {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/login" className="mt-6 block">
+              <Button className="w-full" variant="outline">
+                Continue for {formatINR(TRIAL_PRICE_PAISE)}
+              </Button>
+            </Link>
+          </GlowCard>
+
+          {/* Pro */}
+          <GlowCard customSize glowColor="orange" className="flex flex-col border-brand-500/50 p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-semibold">{PLANS.PRO.name}</h3>
+              <Badge>Most popular</Badge>
             </div>
-          </Card>
-        )}
-
-        <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
-          {(["FREE", "PRO"] as const).map((tier) => {
-            const plan = PLANS[tier];
-            return (
-              <Card key={tier} className={tier === "PRO" ? "border-brand-500" : ""}>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-semibold">{plan.name}</h3>
-                  {tier === "PRO" && <Badge>Most popular</Badge>}
-                </div>
-                <p className="mt-4 text-3xl font-bold">
-                  {plan.pricePaise === 0 ? "₹0" : formatINR(plan.pricePaise)}
-                  {plan.pricePaise > 0 && (
-                    <span className="text-sm font-normal text-ink-400"> /mo per company</span>
-                  )}
-                </p>
-                <ul className="mt-6 space-y-2 text-sm text-ink-100">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex gap-2">
-                      <span className="text-brand-500">✓</span> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/login" className="mt-6 block">
-                  <Button className="w-full" variant={tier === "PRO" ? "default" : "secondary"}>
-                    {tier === "FREE" ? "Start free" : `Get ${plan.name}`}
-                  </Button>
-                </Link>
-              </Card>
-            );
-          })}
+            <p className="mt-4 font-display text-4xl font-bold">
+              {formatINR(PLANS.PRO.pricePaise)}
+              <span className="text-sm font-normal text-ink-400"> /mo per company</span>
+            </p>
+            <ul className="mt-6 flex-1 space-y-2.5 text-sm text-ink-100">
+              {PLANS.PRO.features.map((f) => (
+                <li key={f} className="flex gap-2.5">
+                  <CheckIcon /> {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/login" className="mt-6 block">
+              <Button className="w-full">Get {PLANS.PRO.name}</Button>
+            </Link>
+          </GlowCard>
         </div>
 
         <Card className="mt-8">
           <h3 className="font-semibold">Plus a {REVENUE_SHARE_PERCENT}% revenue share — aligned incentives</h3>
-          <p className="mt-2 text-sm text-ink-100">
+          <p className="mt-2 text-sm leading-relaxed text-ink-100">
             We keep {REVENUE_SHARE_PERCENT}% of the revenue your business processes through its
             payment account, settled automatically via Razorpay Route. We only make real money when
             your business does. Every rupee is itemized in your Finance tab.
@@ -169,21 +277,25 @@ export default function LandingPage() {
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-3xl px-6 pb-24">
-        <h2 className="mb-10 text-center text-3xl font-bold">Questions, answered</h2>
+        <h2 className="mb-10 text-center font-display text-3xl font-bold">Questions, answered</h2>
         <div className="space-y-4">
           {FAQ.map((item) => (
             <Card key={item.q}>
               <h3 className="font-semibold">{item.q}</h3>
-              <p className="mt-2 text-sm text-ink-100">{item.a}</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink-100">{item.a}</p>
             </Card>
           ))}
         </div>
       </section>
 
-      {/* Testimonials placeholder */}
+      {/* Closing CTA */}
       <section className="mx-auto max-w-6xl px-6 pb-24 text-center">
-        <h2 className="text-3xl font-bold">Founders will say nice things here soon</h2>
-        <p className="mt-3 text-ink-400">Early access is open — be the first testimonial.</p>
+        <h2 className="font-display text-3xl font-bold">
+          Your company could be running by tonight
+        </h2>
+        <p className="mt-3 text-ink-400">
+          {FREE_TRIAL_DAYS} days free, everything unlocked. No card required.
+        </p>
         <Link href="/login" className="mt-6 inline-block">
           <Button size="lg">Build my company</Button>
         </Link>
