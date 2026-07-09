@@ -30,9 +30,22 @@ export async function runEngineerTask(taskId: string): Promise<void> {
 
   await assertWithinLlmCaps(company.id);
 
-  const instruction =
-    (task.payload as { instruction?: string })?.instruction ?? task.title;
+  const payload = task.payload as { instruction?: string; imageUrls?: string[] } | null;
+  const instruction = payload?.instruction ?? task.title;
   const memories = await recallMemories(company.id, instruction, 5);
+
+  // Merge freshly uploaded images into the company's design brief so every
+  // future rebuild keeps them. The brief lives on Company.theme.
+  let theme = (company.theme ?? {}) as CompanyTheme;
+  const newImages = (payload?.imageUrls ?? []).filter((u) => /^https:\/\//.test(u));
+  if (newImages.length > 0) {
+    const merged = [...new Set([...(theme.imageUrls ?? []), ...newImages])].slice(-5);
+    theme = { ...theme, imageUrls: merged };
+    await prisma.company.update({ where: { id: company.id }, data: { theme } });
+  }
+  const designBrief = [
+    ...(theme.suggestions ?? []).map((sg, i) => `${i + 1}. ${sg}`),
+  ].join("\n");
 
   const completion = await openai().beta.chat.completions.parse({
     model: model(),
@@ -43,10 +56,11 @@ export async function runEngineerTask(taskId: string): Promise<void> {
 Positioning: ${company.positioning}
 Brand voice: ${company.brandVoice}
 
-You maintain the company's landing page. Given the current copy JSON and a
-change request, return the full updated copy. Keep everything not mentioned in
-the request unchanged. Stay on-brand and benefit-led; no filler.
-
+You are an expert web designer and maintain the company's website. Given the
+current copy JSON and a change request, return the full updated copy. Keep
+everything not mentioned in the request unchanged. Stay on-brand and
+benefit-led; no filler.
+${designBrief ? `\nThe owner's design preferences (always respect these):\n${designBrief}\n` : ""}${theme.imageUrls?.length ? `The owner has uploaded ${theme.imageUrls.length} image(s) that are shown on the site (hero + gallery).\n` : ""}
 Relevant memory:
 ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
       },
@@ -77,7 +91,7 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
       ideaSummary: company.ideaSummary,
       positioning: company.positioning,
       phone: company.phone,
-      theme: company.theme as CompanyTheme | null,
+      theme,
       copy: parsed.updatedCopy as LandingCopy,
     })) {
       await github.putFile({

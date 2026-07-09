@@ -51,8 +51,7 @@ export async function POST(request: Request) {
     }
   }
 
-  // Per-owner company cap, scaled by the best plan tier they hold
-  // (Free 1, Pro/Trial 5, Scale 8).
+  // Per-owner company cap — hard platform limit of 5.
   const owned = await prisma.company.findMany({
     where: { ownerId: user.id },
     select: { planTier: true },
@@ -62,11 +61,9 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error:
-          limit >= 8
-            ? "You've reached the maximum of 8 companies on the Scale plan."
-            : limit >= 5
-              ? "You've reached 5 companies. Upgrade a company to Scale to create up to 8."
-              : "Free plan includes 1 company. Upgrade a company to Pro (5) or Scale (8) to create more.",
+          limit >= 5
+            ? "You've reached the maximum of 5 companies per account."
+            : "Your plan includes 1 company. Upgrade to create up to 5.",
       },
       { status: 403 },
     );

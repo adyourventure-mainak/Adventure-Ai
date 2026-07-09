@@ -38,7 +38,7 @@ export default function OnboardingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
-      router.push(`/c/${data.slug}`);
+      router.push(`/c/${data.slug}/design`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);

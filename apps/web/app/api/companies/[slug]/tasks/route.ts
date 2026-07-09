@@ -7,6 +7,7 @@ const Input = z.object({
   instruction: z.string().min(10).max(2000),
   agent: z.enum(["ENGINEER", "SOCIAL"]).default("ENGINEER"),
   withImage: z.boolean().default(false),
+  imageUrls: z.array(z.string().url().startsWith("https://")).max(5).default([]),
 });
 
 /**
@@ -50,7 +51,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       creditsCost: 1,
       payload: isSocial
         ? { topic: parsed.data.instruction, withImage: parsed.data.withImage, requestedBy: user.email }
-        : { instruction: parsed.data.instruction, requestedBy: user.email },
+        : { instruction: parsed.data.instruction, imageUrls: parsed.data.imageUrls, requestedBy: user.email },
     },
   });
 

@@ -64,7 +64,12 @@ export const CreateCompanyInput = z.object({
 });
 
 /** Design tokens type (from CompanyFoundationSchema.design), stored on Company.theme. */
-export type CompanyTheme = CompanyFoundation["design"];
+export type CompanyTheme = CompanyFoundation["design"] & {
+  /** Owner's website design suggestions (up to 5), collected after onboarding. */
+  suggestions?: string[];
+  /** Owner-uploaded images to feature on the site (public URLs). */
+  imageUrls?: string[];
+};
 export type CreateCompanyInput = z.infer<typeof CreateCompanyInput>;
 
 /** 30-day advertisement plan with segment & competitor research (paid tiers). */

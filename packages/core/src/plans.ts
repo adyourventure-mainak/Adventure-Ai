@@ -98,9 +98,9 @@ export function queuePriority(tier: PlanTier): number {
 
 /** Max companies a single tier entitles an owner to. */
 export function companyLimitForTier(tier: PlanTier): number {
+  // Hard platform cap: no account may create more than 5 companies.
   switch (tier) {
     case "SCALE":
-      return 8;
     case "PRO":
     case "TRIAL":
       return 5;
@@ -124,8 +124,8 @@ export const CREDIT_PACKS = [
   { credits: 100, pricePaise: 349900 },
 ] as const;
 
-/** Platform share of business revenue processed through Razorpay Route. */
-export const REVENUE_SHARE_PERCENT = 20;
+/** Revenue-share model removed — platform keeps 0%. Route payouts (if any) transfer in full. */
+export const REVENUE_SHARE_PERCENT = 0;
 
 export function formatINR(paise: number): string {
   return new Intl.NumberFormat("en-IN", {

@@ -89,6 +89,9 @@ const CSS = `
   button { background: var(--accent); color: #fff; border: 0; padding: 14px 32px; border-radius: var(--radius); font-weight: 600; font-size: 16px; cursor: pointer; }
   button:hover:not(:disabled) { background: var(--accent-dark); }
   button:disabled { opacity: .6; cursor: default; }
+  .hero-img { display: block; max-width: 860px; width: 100%; margin: 40px auto 0; border-radius: var(--radius); box-shadow: 0 20px 50px rgba(0,0,0,.12); }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 24px 0 48px; }
+  .gallery img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius); }
   .form-note { font-size: 14px; }
   .form-note.ok { color: #15803d; }
   .form-note.err { color: #b91c1c; }
@@ -171,6 +174,18 @@ ${waButton}
  */
 export function renderSite(params: SiteParams): SitePage[] {
   const { companyName, copy } = params;
+  // Owner-uploaded images (design brief): first one leads the hero, the rest
+  // form a gallery. URLs are attribute-escaped like all other interpolations.
+  const images = (params.theme?.imageUrls ?? []).filter((u) => /^https:\/\//.test(u)).slice(0, 5);
+  const heroImg = images[0]
+    ? `\n    <img class="hero-img" src="${esc(images[0])}" alt="${esc(companyName)}" />`
+    : "";
+  const gallery = images.length > 1
+    ? `\n  <section class="gallery">\n${images
+        .slice(1)
+        .map((u) => `    <img src="${esc(u)}" alt="${esc(companyName)}" loading="lazy" />`)
+        .join("\n")}\n  </section>`
+    : "";
 
   const index = shell({
     companyName,
@@ -182,8 +197,8 @@ export function renderSite(params: SiteParams): SitePage[] {
     body: `  <section class="hero">
     <h1>${esc(copy.heroHeadline)}</h1>
     <p>${esc(copy.heroSubheadline)}</p>
-    <a class="cta" href="contact.html">${esc(copy.cta)}</a>
-  </section>
+    <a class="cta" href="contact.html">${esc(copy.cta)}</a>${heroImg}
+  </section>${gallery}
   <section class="features">
 ${copy.features.map((f) => `    <div><h3>${esc(f.title)}</h3><p>${esc(f.description)}</p></div>`).join("\n")}
   </section>

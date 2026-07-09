@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PLANS, CREDIT_PACKS, REVENUE_SHARE_PERCENT, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE, FREE_TRIAL_DAYS } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE, FREE_TRIAL_DAYS } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 import { GlowCard } from "@/components/ui/spotlight-card";
 
@@ -26,8 +26,8 @@ const FAQ = [
     a: "You do. The repo lives in your GitHub account (we keep collaborator access to operate). If you cancel, agents pause but you keep the repo plus a full data export for 90 days. No lock-in.",
   },
   {
-    q: "How does the 20% revenue share work?",
-    a: `Your business accepts payments through a Razorpay Route linked account. On each payment, ${100 - REVENUE_SHARE_PERCENT}% settles to you automatically and ${REVENUE_SHARE_PERCENT}% is the platform's share — shown transparently in your Finance tab with a monthly statement.`,
+    q: "Are there any hidden charges?",
+    a: "No. You pay only your plan (or trial) and any credit packs you choose to buy. Revenue your business earns is 100% yours.",
   },
   {
     q: "What if I don't have an idea?",
@@ -109,7 +109,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-ink-400">
-            Plus a {REVENUE_SHARE_PERCENT}% revenue share — we earn when your business does.
+            No revenue share, no hidden charges — what your business earns is 100% yours.
           </p>
         </div>
 
@@ -262,11 +262,10 @@ export default function LandingPage() {
         </div>
 
         <Card className="mt-8">
-          <h3 className="font-semibold">Plus a {REVENUE_SHARE_PERCENT}% revenue share — aligned incentives</h3>
+          <h3 className="font-semibold">Your revenue is 100% yours</h3>
           <p className="mt-2 text-sm leading-relaxed text-ink-100">
-            We keep {REVENUE_SHARE_PERCENT}% of the revenue your business processes through its
-            payment account, settled automatically via Razorpay Route. We only make real money when
-            your business does. Every rupee is itemized in your Finance tab.
+            No revenue share, no commission. You pay only your plan — everything your business
+            earns settles to you.
           </p>
           <p className="mt-4 text-sm text-ink-400">
             Need more runs? On-demand task credits:{" "}

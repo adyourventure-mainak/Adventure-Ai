@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PLANS, CREDIT_PACKS, formatINR, REVENUE_SHARE_PERCENT, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
+import { PLANS, CREDIT_PACKS, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 
 declare global {
@@ -293,8 +293,7 @@ export default function BillingPage() {
       </div>
 
       <p className="mt-6 text-xs text-ink-400">
-        All plans also include a {REVENUE_SHARE_PERCENT}% revenue share on business revenue
-        processed through your linked payment account — itemized monthly in the Finance tab.
+        No revenue share, no hidden charges — everything your business earns is 100% yours.
       </p>
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
     </div>
