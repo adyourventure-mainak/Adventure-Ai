@@ -53,6 +53,8 @@ export async function provisionCompany(companyId: string): Promise<void> {
             ideaSummary: company.ideaSummary,
             positioning: company.positioning,
             phone: company.phone,
+            facebookUrl: company.facebookUrl,
+            instagramUrl: company.instagramUrl,
             theme: company.theme as CompanyTheme | null,
             copy,
           })) {

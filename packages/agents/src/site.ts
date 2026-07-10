@@ -17,6 +17,8 @@ export interface SiteParams {
   ideaSummary?: string | null;
   positioning?: string | null;
   phone?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
   theme?: CompanyTheme | null;
   copy: LandingCopy;
 }
@@ -89,6 +91,11 @@ const CSS = `
   button { background: var(--accent); color: #fff; border: 0; padding: 14px 32px; border-radius: var(--radius); font-weight: 600; font-size: 16px; cursor: pointer; }
   button:hover:not(:disabled) { background: var(--accent-dark); }
   button:disabled { opacity: .6; cursor: default; }
+  .cta-secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); margin-left: 12px; }
+  .cta-secondary:hover { background: var(--accent); color: #fff; }
+  .call-btn { background: var(--accent); color: #fff !important; padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; text-decoration: none; }
+  .call-btn:hover { background: var(--accent-dark); }
+  .socials { margin-bottom: 8px; } .socials a { font-weight: 600; }
   .hero-img { display: block; max-width: 860px; width: 100%; margin: 40px auto 0; border-radius: var(--radius); box-shadow: 0 20px 50px rgba(0,0,0,.12); }
   .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding: 24px 0 48px; }
   .gallery img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: var(--radius); }
@@ -120,6 +127,8 @@ function shell(params: {
   body: string;
   theme?: CompanyTheme | null;
   phone?: string | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
 }): string {
   const nav = (
     [
@@ -142,6 +151,11 @@ function shell(params: {
     : "";
 
   const styleCss = STYLE_CSS[params.theme?.style ?? "minimal"] ?? "";
+  const socials = [
+    params.facebookUrl ? `<a href="${esc(params.facebookUrl)}" target="_blank" rel="noopener">Facebook</a>` : "",
+    params.instagramUrl ? `<a href="${esc(params.instagramUrl)}" target="_blank" rel="noopener">Instagram</a>` : "",
+  ].filter(Boolean).join(" · ");
+  const callNav = wa ? `<a class="call-btn" href="tel:+${wa}">📞 Call now</a>` : "";
 
   return `<!doctype html>
 <html lang="en">
@@ -153,11 +167,11 @@ function shell(params: {
 <style>${css(params.theme)}${CSS}${styleCss}</style>
 </head>
 <body>
-<header><div class="wrap"><a class="logo" href="index.html">${esc(params.companyName)}</a><nav>${nav}</nav></div></header>
+<header><div class="wrap"><a class="logo" href="index.html">${esc(params.companyName)}</a><nav>${nav}${callNav}</nav></div></header>
 <main class="wrap">
 ${params.body}
 </main>
-<footer>© ${new Date().getFullYear()} ${esc(params.companyName)} · Built and operated by <a href="${PLATFORM_URL}">Adventure AI</a></footer>
+<footer>${socials ? `<p class="socials">${socials}</p>` : ""}© ${new Date().getFullYear()} ${esc(params.companyName)} · Built and operated by <a href="${PLATFORM_URL}">Adventure AI</a></footer>
 ${waButton}
 </body>
 </html>
@@ -177,6 +191,8 @@ export function renderSite(params: SiteParams): SitePage[] {
   // Owner-uploaded images (design brief): first one leads the hero, the rest
   // form a gallery. URLs are attribute-escaped like all other interpolations.
   const images = (params.theme?.imageUrls ?? []).filter((u) => /^https:\/\//.test(u)).slice(0, 5);
+  const tel = waNumber(params.phone);
+  const heroCall = tel ? `\n    <a class="cta cta-secondary" href="tel:+${tel}">📞 Call us</a>` : "";
   const heroImg = images[0]
     ? `\n    <img class="hero-img" src="${esc(images[0])}" alt="${esc(companyName)}" />`
     : "";
@@ -194,10 +210,12 @@ export function renderSite(params: SiteParams): SitePage[] {
     active: "index",
     theme: params.theme,
     phone: params.phone,
+    facebookUrl: params.facebookUrl,
+    instagramUrl: params.instagramUrl,
     body: `  <section class="hero">
     <h1>${esc(copy.heroHeadline)}</h1>
     <p>${esc(copy.heroSubheadline)}</p>
-    <a class="cta" href="contact.html">${esc(copy.cta)}</a>${heroImg}
+    <a class="cta" href="contact.html">${esc(copy.cta)}</a>${heroCall}${heroImg}
   </section>${gallery}
   <section class="features">
 ${copy.features.map((f) => `    <div><h3>${esc(f.title)}</h3><p>${esc(f.description)}</p></div>`).join("\n")}
@@ -215,6 +233,8 @@ ${copy.faq.map((q) => `    <details><summary>${esc(q.question)}</summary><p>${es
     active: "about",
     theme: params.theme,
     phone: params.phone,
+    facebookUrl: params.facebookUrl,
+    instagramUrl: params.instagramUrl,
     body: `  <section class="page">
     <h1>About ${esc(companyName)}</h1>
 ${params.tagline ? `    <p><strong>${esc(params.tagline)}</strong></p>` : ""}
@@ -233,6 +253,8 @@ ${params.positioning ? `    <h2>Who we serve</h2>\n    <p>${esc(params.positioni
     active: "services",
     theme: params.theme,
     phone: params.phone,
+    facebookUrl: params.facebookUrl,
+    instagramUrl: params.instagramUrl,
     body: `  <section class="page">
     <h1>What we offer</h1>
 ${copy.features
@@ -249,6 +271,8 @@ ${copy.features
     active: "contact",
     theme: params.theme,
     phone: params.phone,
+    facebookUrl: params.facebookUrl,
+    instagramUrl: params.instagramUrl,
     body: `  <section class="page">
     <h1>Contact us</h1>
     <p>Send us a message and we'll get back to you.</p>
