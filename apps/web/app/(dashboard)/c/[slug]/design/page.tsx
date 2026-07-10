@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button, Card } from "@/components/ui";
+import { uploadImages } from "@/lib/upload-images";
 
 const MAX_SUGGESTIONS = 5;
 const MAX_IMAGES = 5;
@@ -31,20 +32,15 @@ export default function DesignBriefPage() {
     try {
       let imageUrls: string[] = [];
       if (files.length > 0) {
-        const form = new FormData();
-        files.slice(0, MAX_IMAGES).forEach((f) => form.append("files", f));
-        const up = await fetch(`/api/companies/${slug}/uploads`, { method: "POST", body: form });
-        const upData = await up.json();
-        if (!up.ok) throw new Error(upData.error ?? "Image upload failed");
-        imageUrls = upData.urls;
+        imageUrls = await uploadImages(slug, files.slice(0, MAX_IMAGES));
       }
       const res = await fetch(`/api/companies/${slug}/design`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ suggestions: cleaned, imageUrls }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong");
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error ?? `Something went wrong (${res.status}) — please retry`);
       router.push(`/c/${slug}?design=1`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
@@ -99,7 +95,7 @@ export default function DesignBriefPage() {
         </h2>
         <p className="mt-1 text-xs text-ink-400">
           Product photos, your shop, your team — the first image leads the homepage, the rest form
-          a gallery. JPG/PNG, max 5 MB each.
+          a gallery. JPG/PNG, max 4 MB each.
         </p>
         <input
           type="file"

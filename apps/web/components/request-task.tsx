@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Textarea } from "@/components/ui";
+import { uploadImages } from "@/lib/upload-images";
 
 export function RequestTask({ slug }: { slug: string }) {
   const router = useRouter();
@@ -20,25 +21,22 @@ export function RequestTask({ slug }: { slug: string }) {
     // Engineer tasks can carry owner images (site photos, product shots).
     let imageUrls: string[] = [];
     if (agent === "ENGINEER" && files.length > 0) {
-      const form = new FormData();
-      files.slice(0, 5).forEach((f) => form.append("files", f));
-      const up = await fetch(`/api/companies/${slug}/uploads`, { method: "POST", body: form });
-      const upData = await up.json().catch(() => ({}));
-      if (!up.ok) {
-        setError(upData.error ?? "Image upload failed");
+      try {
+        imageUrls = await uploadImages(slug, files.slice(0, 5));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Image upload failed");
         setState("idle");
         return;
       }
-      imageUrls = upData.urls;
     }
     const res = await fetch(`/api/companies/${slug}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ instruction, agent, withImage: agent === "SOCIAL" && withImage, imageUrls }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
     if (!res.ok) {
-      setError(data.error ?? "Something went wrong");
+      setError(data?.error ?? `Something went wrong (${res.status}) — please retry`);
       setState("idle");
       return;
     }

@@ -9,7 +9,7 @@ export const maxDuration = 60;
 // design brief (Company.theme.imageUrls) or an Engineer task payload.
 const BUCKET = "site-assets";
 const MAX_FILES = 5;
-const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_BYTES = 4 * 1024 * 1024; // Vercel serverless request body cap is ~4.5 MB
 
 function storageConfigured() {
   return Boolean(
@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
       return NextResponse.json({ error: `"${file.name}" is not an image` }, { status: 400 });
     }
     if (file.size > MAX_BYTES) {
-      return NextResponse.json({ error: `"${file.name}" is over 5 MB` }, { status: 400 });
+      return NextResponse.json({ error: `"${file.name}" is over 4 MB — please use a smaller image` }, { status: 400 });
     }
     const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const path = `${company.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
