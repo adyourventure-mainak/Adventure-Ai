@@ -38,11 +38,53 @@ const FONT_STACK: Record<NonNullable<CompanyTheme["fontFamily"]>, string> = {
 
 /** Per-style tweaks layered on top of the base CSS. */
 const STYLE_CSS: Record<NonNullable<CompanyTheme["style"]>, string> = {
-  minimal: "",
-  bold: `  .hero h1 { font-size: 54px; font-weight: 800; } nav a { text-transform: uppercase; letter-spacing: .04em; font-size: 13px; } .cta { font-size: 18px; }`,
-  playful: `  :root { --radius: 20px; } .cta, .card, input, textarea, button { border-radius: 20px !important; } .hero h1 { font-size: 46px; }`,
-  elegant: `  .hero h1 { font-weight: 600; letter-spacing: -0.01em; } h1, h2, h3 { letter-spacing: .01em; } .hero { padding-top: 120px; }`,
-  corporate: `  :root { --radius: 6px; } .cta, .card, input, textarea, button { border-radius: 6px !important; } .card { background: #fafafa; }`,
+  // Airy, centered, quiet — whitespace and thin accent rules.
+  minimal: `
+  .hero { padding: 128px 0 88px; }
+  .features { gap: 48px; padding: 64px 0 96px; }
+  .features div { border-top: 2px solid var(--accent); padding-top: 16px; }
+  footer { border-top: none; }`,
+  // Loud type, uppercase nav, tinted feature panels, accent-banded header.
+  bold: `
+  .hero h1 { font-size: 58px; font-weight: 800; letter-spacing: -0.02em; }
+  nav a { text-transform: uppercase; letter-spacing: .06em; font-size: 13px; font-weight: 700; }
+  .cta { font-size: 18px; padding: 16px 40px; }
+  header { border-bottom: 4px solid var(--accent); }
+  .features div { background: color-mix(in srgb, var(--accent) 9%, #fff); padding: 28px; border-radius: var(--radius); }
+  .features h3 { color: var(--accent-dark); }`,
+  // Round everything, soft tinted cards, tilted imagery, bouncy hover.
+  playful: `
+  :root { --radius: 22px; }
+  .cta, .card, input, textarea, button, .features div { border-radius: 22px !important; }
+  .hero h1 { font-size: 46px; }
+  .hero-img, .gallery img { border-radius: 22px; transform: rotate(-1.5deg); }
+  .features div { background: color-mix(in srgb, var(--accent) 10%, #fff); padding: 26px; transition: transform .2s; }
+  .features div:hover { transform: translateY(-4px) rotate(.5deg); }
+  header { border-bottom: 0; }`,
+  // Refined and understated: hairlines, small-caps nav, outlined CTA.
+  elegant: `
+  body { letter-spacing: .005em; }
+  .hero { padding: 120px 0 80px; }
+  .hero h1 { font-weight: 600; font-size: 40px; letter-spacing: .01em; }
+  nav a { font-variant: small-caps; letter-spacing: .12em; font-size: 14px; }
+  .cta { background: transparent; color: var(--accent-dark); border: 1px solid var(--accent-dark); }
+  .cta:hover { background: var(--accent-dark); color: #fff; }
+  .features { border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5; padding: 56px 0; gap: 40px; }
+  .hero-img, .gallery img { border-radius: 2px; }`,
+  // Squared, structured, dark header, boxed feature grid — business-like.
+  corporate: `
+  :root { --radius: 4px; }
+  .cta, .card, input, textarea, button { border-radius: 4px !important; }
+  .hero { text-align: left; padding: 88px 0 64px; }
+  .hero h1, .hero p { margin-left: 0; }
+  header { background: var(--ink); }
+  header .logo, header nav a { color: #fff; }
+  header nav a.active, header nav a:hover { color: var(--accent); }
+  .features { gap: 0; border: 1px solid #e5e5e5; }
+  .features div { border-right: 1px solid #e5e5e5; padding: 28px; margin: 0; }
+  .features div:last-child { border-right: 0; }
+  .hero-img { margin-left: 0; }
+  .card { background: #fafafa; }`,
 };
 
 function css(theme?: CompanyTheme | null): string {
@@ -91,6 +133,10 @@ const CSS = `
   button { background: var(--accent); color: #fff; border: 0; padding: 14px 32px; border-radius: var(--radius); font-weight: 600; font-size: 16px; cursor: pointer; }
   button:hover:not(:disabled) { background: var(--accent-dark); }
   button:disabled { opacity: .6; cursor: default; }
+  .hero-split { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px; align-items: center; text-align: left; padding: 80px 0 64px; }
+  .hero-split h1, .hero-split p { margin-left: 0; margin-right: 0; max-width: none; }
+  .hero-split .hero-img { margin: 0; max-width: 100%; }
+  @media (max-width: 760px) { .hero-split { grid-template-columns: 1fr; text-align: center; } }
   .cta-secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); margin-left: 12px; }
   .cta-secondary:hover { background: var(--accent); color: #fff; }
   .call-btn { background: var(--accent); color: #fff !important; padding: 8px 16px; border-radius: 999px; font-weight: 600; font-size: 14px; text-decoration: none; }
@@ -193,9 +239,13 @@ export function renderSite(params: SiteParams): SitePage[] {
   const images = (params.theme?.imageUrls ?? []).filter((u) => /^https:\/\//.test(u)).slice(0, 5);
   const tel = waNumber(params.phone);
   const heroCall = tel ? `\n    <a class="cta cta-secondary" href="tel:+${tel}">📞 Call us</a>` : "";
+  const style = params.theme?.style ?? "minimal";
   const heroImg = images[0]
     ? `\n    <img class="hero-img" src="${esc(images[0])}" alt="${esc(companyName)}" />`
     : "";
+  // Structural variety: bold/corporate sites with an image use a side-by-side
+  // hero instead of the stacked centered one.
+  const splitHero = Boolean(images[0]) && (style === "bold" || style === "corporate");
   const gallery = images.length > 1
     ? `\n  <section class="gallery">\n${images
         .slice(1)
@@ -212,11 +262,19 @@ export function renderSite(params: SiteParams): SitePage[] {
     phone: params.phone,
     facebookUrl: params.facebookUrl,
     instagramUrl: params.instagramUrl,
-    body: `  <section class="hero">
+    body: (splitHero
+      ? `  <section class="hero hero-split">
+    <div>
+      <h1>${esc(copy.heroHeadline)}</h1>
+      <p>${esc(copy.heroSubheadline)}</p>
+      <a class="cta" href="contact.html">${esc(copy.cta)}</a>${heroCall}
+    </div>${heroImg}
+  </section>`
+      : `  <section class="hero">
     <h1>${esc(copy.heroHeadline)}</h1>
     <p>${esc(copy.heroSubheadline)}</p>
     <a class="cta" href="contact.html">${esc(copy.cta)}</a>${heroCall}${heroImg}
-  </section>${gallery}
+  </section>`) + `${gallery}
   <section class="features">
 ${copy.features.map((f) => `    <div><h3>${esc(f.title)}</h3><p>${esc(f.description)}</p></div>`).join("\n")}
   </section>

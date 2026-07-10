@@ -16,6 +16,7 @@ const EditResultSchema = z.object({
   accentDarkColor: z.string().nullable().describe("Darker hover shade of the accent as #rrggbb hex, or null"),
   style: z.enum(["minimal", "bold", "playful", "elegant", "corporate"]).nullable().describe("New visual style, or null"),
   fontFamily: z.enum(["sans", "serif", "rounded", "mono"]).nullable().describe("New font family, or null"),
+  removeUploadedImages: z.boolean().nullable().describe("true ONLY if the owner asked to remove/delete their uploaded image(s) from the website"),
   facebookUrl: z.string().nullable().describe("Full Facebook page URL if the owner asked to link one, else null"),
   instagramUrl: z.string().nullable().describe("Full Instagram profile URL if the owner asked to link one, else null"),
   changeSummary: z.string().describe("One sentence describing what changed and why"),
@@ -78,7 +79,8 @@ colours, look or feel (pick tasteful hex values that fit; the site is a clean
 template with one accent colour). If the owner asks to link their Facebook or
 Instagram page, set facebookUrl/instagramUrl. The site already supports: a
 call button (when the company has a phone number), a WhatsApp chat button,
-owner-uploaded hero/gallery images, and social links in the footer.
+owner-uploaded hero/gallery images (set removeUploadedImages to true to take
+them off the site when asked), and social links in the footer.
 ${designBrief ? `\nThe owner's design preferences (always respect these):\n${designBrief}\n` : ""}${theme.imageUrls?.length ? `The owner has uploaded ${theme.imageUrls.length} image(s) that are shown on the site (hero + gallery).\n` : ""}
 Relevant memory:
 ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
@@ -97,13 +99,14 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
 
   // Apply requested visual/brand changes to the persistent theme + socials.
   const themePatch: Partial<CompanyTheme> = {};
+  if (parsed.removeUploadedImages) themePatch.imageUrls = [];
   if (parsed.accentColor && HEX.test(parsed.accentColor)) themePatch.accentColor = parsed.accentColor;
   if (parsed.accentDarkColor && HEX.test(parsed.accentDarkColor)) themePatch.accentDarkColor = parsed.accentDarkColor;
   if (parsed.style) themePatch.style = parsed.style;
   if (parsed.fontFamily) themePatch.fontFamily = parsed.fontFamily;
   const facebookUrl = asUrl(parsed.facebookUrl);
   const instagramUrl = asUrl(parsed.instagramUrl);
-  if (Object.keys(themePatch).length > 0 || facebookUrl || instagramUrl) {
+  if (Object.keys(themePatch).length > 0 || facebookUrl || instagramUrl || parsed.removeUploadedImages) {
     theme = { ...theme, ...themePatch };
     await prisma.company.update({
       where: { id: company.id },
