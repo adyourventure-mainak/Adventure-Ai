@@ -25,7 +25,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <a href="https://adventure-ai.in" className="hover:text-white underline underline-offset-2">
           adventure-ai.in
         </a>{" "}
-        · <Link href="/privacy" className="hover:text-white underline underline-offset-2">Privacy Policy</Link>
+        · <Link href="/privacy" className="hover:text-white underline underline-offset-2">Privacy Policy</Link>{" "}
+        · <Link href="/terms" className="hover:text-white underline underline-offset-2">Terms &amp; Conditions</Link>{" "}
+        · <a href="mailto:008.mainak@gmail.com" className="hover:text-white underline underline-offset-2">Contact</a>
       </footer>
     </div>
   );
