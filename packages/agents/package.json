@@ -11,6 +11,7 @@
   "dependencies": {
     "@adventure/core": "workspace:*",
     "@adventure/db": "workspace:*",
+    "langsmith": "^0.8.1",
     "openai": "^4.67.0",
     "sharp": "^0.35.3",
     "zod": "^3.25.76"

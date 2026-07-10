@@ -113,7 +113,7 @@ export default async function InboxPage({ params }: { params: { slug: string } }
       ) : (
         <div className="space-y-4">
           {items.map((item) => (
-            <InboxItem key={item.id} item={item} />
+            <InboxItem key={item.id} slug={company.slug} item={item} />
           ))}
         </div>
       )}

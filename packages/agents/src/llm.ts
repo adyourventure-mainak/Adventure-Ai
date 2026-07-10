@@ -1,9 +1,16 @@
 import OpenAI from "openai";
+import { wrapOpenAI } from "langsmith/wrappers";
 
 let _client: OpenAI | null = null;
 
 export function openai(): OpenAI {
-  if (!_client) _client = new OpenAI();
+  if (!_client) {
+    const raw = new OpenAI();
+    // LangSmith tracing: every agent call (prompt, output, latency, tokens)
+    // shows up at smith.langchain.com when LANGSMITH_API_KEY is set. No-op
+    // otherwise — the wrapper is inert without the env.
+    _client = process.env.LANGSMITH_API_KEY ? (wrapOpenAI(raw) as unknown as OpenAI) : raw;
+  }
   return _client;
 }
 

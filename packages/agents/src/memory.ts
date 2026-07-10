@@ -16,7 +16,7 @@ async function embed(text: string): Promise<number[]> {
 export async function saveMemory(params: {
   companyId: string;
   agent: AgentType;
-  kind: "decision" | "learning" | "customer_fact" | "research" | "event";
+  kind: "decision" | "learning" | "customer_fact" | "research" | "event" | "feedback";
   content: string;
   taskId?: string;
 }): Promise<void> {
