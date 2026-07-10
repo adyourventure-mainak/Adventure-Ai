@@ -31,10 +31,17 @@ export async function DELETE(_request: Request, { params }: { params: { slug: st
     }
   }
 
-  await prisma.company.update({
-    where: { id: company.id },
-    data: { status: "DELETING", taskCyclesPerDay: 0 },
-  });
+  await prisma.$transaction([
+    prisma.company.update({
+      where: { id: company.id },
+      data: { status: "DELETING", taskCyclesPerDay: 0 },
+    }),
+    // The freed slot only opens next month — record the tombstone now, since
+    // the worker wipes the company rows shortly.
+    prisma.deletedCompanySlot.create({
+      data: { ownerId: user.id, name: company.name },
+    }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

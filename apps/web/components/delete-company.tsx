@@ -30,8 +30,9 @@ export function DeleteCompany({ slug, name }: { slug: string; name: string }) {
       <h2 className="font-semibold text-red-400">Delete this company</h2>
       <p className="mt-1 text-sm text-ink-400">
         Permanently deletes <strong>{name}</strong> — its website, code repository, posts, plans,
-        and all data. Any active subscription is cancelled. This cannot be undone, and it frees a
-        slot toward your 5-company limit.
+        and all data. Any active subscription is cancelled. This cannot be undone. Note: the
+        company slot stays used for the rest of this month — you can create a replacement company
+        next month (5 slots per month's subscription).
       </p>
       {!open ? (
         <Button

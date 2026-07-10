@@ -52,6 +52,7 @@ export async function POST() {
     prisma.subscription.deleteMany({ where: { companyId: { in: ids } } }),
     prisma.company.deleteMany({ where: { id: { in: ids } } }),
     prisma.businessAudit.deleteMany({ where: { userId: user.id } }),
+    prisma.deletedCompanySlot.deleteMany({ where: { ownerId: user.id } }),
     prisma.user.delete({ where: { id: user.id } }),
   ]);
 

@@ -220,6 +220,18 @@ model Company {
   @@map("companies")
 }
 
+/// Tombstones for deleted companies: a deleted company keeps occupying its
+/// monthly slot until the next month starts (5 companies per month cap).
+model DeletedCompanySlot {
+  id        String   @id @default(cuid())
+  ownerId   String   @db.Uuid
+  name      String
+  deletedAt DateTime @default(now())
+
+  @@index([ownerId, deletedAt])
+  @@map("deleted_company_slots")
+}
+
 // ─────────────────────────── Billing ───────────────────────────
 
 model Subscription {

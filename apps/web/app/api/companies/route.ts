@@ -51,19 +51,31 @@ export async function POST(request: Request) {
     }
   }
 
-  // Per-owner company cap — hard platform limit of 5.
-  const owned = await prisma.company.findMany({
-    where: { ownerId: user.id, status: { not: "DELETING" } },
-    select: { planTier: true },
-  });
+  // Per-owner cap: 5 company slots per month. Live companies (including ones
+  // mid-deletion) occupy a slot, and deleting a company does NOT free its
+  // slot until the next month starts — the tombstone ledger keeps it counted.
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const [owned, deletedThisMonth] = await Promise.all([
+    prisma.company.findMany({
+      where: { ownerId: user.id },
+      select: { planTier: true },
+    }),
+    prisma.deletedCompanySlot.count({
+      where: { ownerId: user.id, deletedAt: { gte: monthStart } },
+    }),
+  ]);
   const limit = companyLimitForOwner(owned.map((c) => c.planTier));
-  if (owned.length >= limit) {
+  if (owned.length + deletedThisMonth >= limit) {
     return NextResponse.json(
       {
         error:
-          limit >= 5
-            ? "You've reached the maximum of 5 companies per account."
-            : "Your plan includes 1 company. Upgrade to create up to 5.",
+          deletedThisMonth > 0
+            ? "All 5 company slots for this month are used (deleted companies keep their slot until next month). Try again next month, or use a new subscription."
+            : limit >= 5
+              ? "You've reached the maximum of 5 companies for this month's subscription."
+              : "Your plan includes 1 company. Upgrade to create up to 5 per month.",
       },
       { status: 403 },
     );
