@@ -69,6 +69,9 @@ export default async function CompanyPage({ params }: { params: { slug: string }
           <Link href={`/c/${company.slug}/inbox`}>
             <Badge variant="default" className="cursor-pointer">Inbox</Badge>
           </Link>
+          <Link href={`/c/${company.slug}/billing`}>
+            <Badge variant="outline" className="cursor-pointer">Billing &amp; settings</Badge>
+          </Link>
           <Badge variant="outline">{credits} credits</Badge>
           <Badge variant={company.status === "ACTIVE" ? "success" : "outline"}>
             {company.status}
