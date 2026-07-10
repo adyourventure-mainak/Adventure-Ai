@@ -6,9 +6,13 @@ import { getUser } from "@/lib/auth";
 export const maxDuration = 120;
 
 /**
- * DPDP right to erasure: permanently delete the account — every company, all
- * agent output, billing records, and the auth user itself. Active Razorpay
- * subscriptions are cancelled first (best-effort). Irreversible.
+ * DPDP right to erasure. Three-step teardown:
+ *   1. Here: cancel all subscriptions, mark every company DELETING, stamp
+ *      User.deletedAt.
+ *   2. Here: delete the Supabase auth user — the login dies immediately, so
+ *      the account can't "resurrect" via getUser's upsert on next sign-in.
+ *   3. Worker: tears down each company's live site + repo and wipes its rows,
+ *      then removes the user row, audits, and slot tombstones.
  */
 export async function POST() {
   const user = await getUser();
@@ -19,7 +23,7 @@ export async function POST() {
     select: { id: true, subscription: { select: { status: true, razorpaySubscriptionId: true } } },
   });
 
-  // 1. Stop billing before the rows disappear.
+  // 1. Stop billing, hand companies to the worker's teardown.
   for (const c of companies) {
     const sub = c.subscription;
     if (sub && sub.status !== "CANCELLED" && sub.razorpaySubscriptionId) {
@@ -30,33 +34,15 @@ export async function POST() {
       }
     }
   }
-
-  // 2. Wipe every company's data, then the companies, audits, and user row.
-  const ids = companies.map((c) => c.id);
   await prisma.$transaction([
-    prisma.approval.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.activityLog.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.memoryEntry.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.creditLedgerEntry.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.task.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.integration.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.provisionRecord.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.landingPage.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.dailyBrief.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.kpiSnapshot.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.transferRecord.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.llmUsageDay.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.dataExport.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.companyPlan.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.agentState.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.subscription.deleteMany({ where: { companyId: { in: ids } } }),
-    prisma.company.deleteMany({ where: { id: { in: ids } } }),
-    prisma.businessAudit.deleteMany({ where: { userId: user.id } }),
-    prisma.deletedCompanySlot.deleteMany({ where: { ownerId: user.id } }),
-    prisma.user.delete({ where: { id: user.id } }),
+    prisma.company.updateMany({
+      where: { ownerId: user.id },
+      data: { status: "DELETING", taskCyclesPerDay: 0 },
+    }),
+    prisma.user.update({ where: { id: user.id }, data: { deletedAt: new Date() } }),
   ]);
 
-  // 3. Remove the Supabase auth user so the login itself is gone.
+  // 2. Kill the login itself. Without this the account recreates on sign-in.
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (supabaseUrl && serviceKey) {
@@ -64,9 +50,10 @@ export async function POST() {
       method: "DELETE",
       headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
     });
-    if (!res.ok) console.error("[account/delete] auth user delete failed:", res.status);
-  } else {
-    console.error("[account/delete] SUPABASE_SERVICE_ROLE_KEY not set — auth user not removed");
+    if (!res.ok && res.status !== 404) {
+      console.error("[account/delete] auth user delete failed:", res.status, await res.text().catch(() => ""));
+      // The worker retries auth deletion during final cleanup.
+    }
   }
 
   return NextResponse.json({ ok: true });

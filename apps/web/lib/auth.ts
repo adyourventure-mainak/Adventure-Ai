@@ -22,9 +22,12 @@ export async function getUser(): Promise<AuthedUser | null> {
     where: { id: user.id },
     create: { id: user.id, email: user.email, name: user.user_metadata?.full_name ?? null },
     update: { email: user.email },
-    select: { id: true, email: true, isAdmin: true },
+    select: { id: true, email: true, isAdmin: true, deletedAt: true },
   });
-  return dbUser;
+  // Deletion in progress: the account is dead even if the auth session
+  // briefly survives while the worker finishes the teardown.
+  if (dbUser.deletedAt) return null;
+  return { id: dbUser.id, email: dbUser.email, isAdmin: dbUser.isAdmin };
 }
 
 export async function requireUser(): Promise<AuthedUser> {

@@ -96,6 +96,43 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
         }
       }
 
+      // 0a2. Finish account deletions: once a deleted user's companies are all
+      // torn down (step 0a), remove audits, slot tombstones, the user row, and
+      // (re)try removing the Supabase auth user so the login stays dead.
+      {
+        const goners = await prisma.user.findMany({
+          where: { deletedAt: { not: null }, companies: { none: {} } },
+          select: { id: true, email: true },
+          take: 5,
+        });
+        for (const u of goners) {
+          try {
+            const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+            const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            if (supabaseUrl && serviceKey) {
+              const res = await fetch(
+                `${supabaseUrl.replace(/\/$/, "")}/auth/v1/admin/users/${u.id}`,
+                {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+                },
+              );
+              if (!res.ok && res.status !== 404) {
+                throw new Error(`auth user delete failed (${res.status})`);
+              }
+            }
+            await prisma.$transaction([
+              prisma.businessAudit.deleteMany({ where: { userId: u.id } }),
+              prisma.deletedCompanySlot.deleteMany({ where: { ownerId: u.id } }),
+              prisma.user.delete({ where: { id: u.id } }),
+            ]);
+            console.log(`[scheduler] account fully deleted: ${u.email}`);
+          } catch (err) {
+            console.error(`[scheduler] account cleanup failed for ${u.id}:`, err);
+          }
+        }
+      }
+
       // 0b. The approval step was removed — deliverables now ship straight to
       // the inbox. Auto-approve any drafts still parked from before and
       // requeue their tasks so the runners resume at the ship step.

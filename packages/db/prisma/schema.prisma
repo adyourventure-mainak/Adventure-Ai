@@ -151,11 +151,12 @@ enum ProvisionStatus {
 
 /// Mirrors Supabase auth.users (id = auth uid). Created via auth webhook/trigger.
 model User {
-  id        String   @id @db.Uuid
-  email     String   @unique
+  id        String    @id @db.Uuid
+  email     String    @unique
   name      String?
-  isAdmin   Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isAdmin   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  deletedAt DateTime? // account deletion requested — worker finishes teardown
 
   companies Company[]
   audits    BusinessAudit[]
