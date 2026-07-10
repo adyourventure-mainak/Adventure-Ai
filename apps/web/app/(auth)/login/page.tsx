@@ -40,7 +40,12 @@ function LoginForm() {
     setError(null);
     const { error } = await supabaseBrowser().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: redirectTo() },
+      options: {
+        redirectTo: redirectTo(),
+        // Always show Google's account chooser instead of silently reusing
+        // the last-used profile.
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (error) setError(error.message);
   }
