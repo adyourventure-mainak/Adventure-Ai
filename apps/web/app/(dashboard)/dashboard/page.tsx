@@ -19,7 +19,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function DashboardPage() {
   const user = await requireUser();
   const companies = await prisma.company.findMany({
-    where: { ownerId: user.id },
+    where: { ownerId: user.id, status: { not: "DELETING" } },
     orderBy: { createdAt: "desc" },
     select: { id: true, name: true, slug: true, status: true, planTier: true, positioning: true, trialEndsAt: true },
   });

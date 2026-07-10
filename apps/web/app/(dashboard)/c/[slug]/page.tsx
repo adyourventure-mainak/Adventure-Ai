@@ -35,6 +35,7 @@ export default async function CompanyPage({ params }: { params: { slug: string }
     },
   });
   if (!company || company.ownerId !== user.id) notFound();
+  if (company.status === "DELETING") redirect("/dashboard?deleted=1");
   // Unpaid companies (legacy Free, or an expired trial) see only billing.
   const trialExpired =
     company.planTier === "TRIAL" && company.trialEndsAt && company.trialEndsAt < new Date();

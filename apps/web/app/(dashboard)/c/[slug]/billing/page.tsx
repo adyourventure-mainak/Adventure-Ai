@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PLANS, CREDIT_PACKS, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
+import { DeleteCompany } from "@/components/delete-company";
 
 declare global {
   interface Window {
@@ -296,6 +297,8 @@ export default function BillingPage() {
         No revenue share, no hidden charges — everything your business earns is 100% yours.
       </p>
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+
+      <DeleteCompany slug={slug} name={slug} />
     </div>
   );
 }

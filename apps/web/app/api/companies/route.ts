@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
   // Per-owner company cap — hard platform limit of 5.
   const owned = await prisma.company.findMany({
-    where: { ownerId: user.id },
+    where: { ownerId: user.id, status: { not: "DELETING" } },
     select: { planTier: true },
   });
   const limit = companyLimitForOwner(owned.map((c) => c.planTier));

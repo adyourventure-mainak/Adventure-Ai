@@ -33,6 +33,23 @@ export interface GhRepo {
   default_branch: string;
 }
 
+/** Delete a repo (company deletion). 204 on success; 404 treated as done. */
+export async function deleteRepo(repoFullName: string): Promise<void> {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) throw new Error("GITHUB_TOKEN not configured");
+  const res = await fetch(`${API}/repos/${repoFullName}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`GitHub DELETE /repos/${repoFullName} failed (${res.status})`);
+  }
+}
+
 /** Fetch a repo (used to get the numeric id Vercel needs to trigger a deploy). */
 export async function getRepo(repoFullName: string): Promise<GhRepo> {
   return gh<GhRepo>(`/repos/${repoFullName}`);

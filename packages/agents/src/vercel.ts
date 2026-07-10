@@ -29,6 +29,19 @@ async function vc<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+/** Delete a project (company deletion). 404 treated as already gone. */
+export async function deleteProject(idOrName: string): Promise<void> {
+  const token = process.env.VERCEL_TOKEN;
+  if (!token) throw new Error("VERCEL_TOKEN not configured");
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const url = new URL(`${API}/v9/projects/${idOrName}`);
+  if (teamId) url.searchParams.set("teamId", teamId);
+  const res = await fetch(url, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Vercel DELETE project ${idOrName} failed (${res.status})`);
+  }
+}
+
 export interface VercelProject {
   id: string;
   name: string;

@@ -1,6 +1,7 @@
 import type { Queue } from "bullmq";
 import { prisma } from "@adventure/db";
 import { queuePriority } from "@adventure/core";
+import { vercel, github } from "@adventure/agents";
 import type { AgentQueueName } from "./queues";
 
 /**
@@ -43,6 +44,55 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
               },
             }),
           ]);
+        }
+      }
+
+      // 0a. Owner-requested company deletions: tear down the live site and
+      // repo (worker holds the platform tokens), then wipe every row.
+      {
+        const deleting = await prisma.company.findMany({
+          where: { status: "DELETING" },
+          select: {
+            id: true,
+            name: true,
+            provisions: { select: { resource: true, status: true, externalId: true } },
+          },
+          take: 5,
+        });
+        for (const c of deleting) {
+          try {
+            const project = c.provisions.find((p) => p.resource === "VERCEL_PROJECT" && p.externalId);
+            if (project?.externalId && vercel.vercelConfigured()) {
+              await vercel.deleteProject(project.externalId);
+            }
+            const repo = c.provisions.find((p) => p.resource === "GITHUB_REPO" && p.externalId);
+            if (repo?.externalId && github.githubConfigured()) {
+              await github.deleteRepo(repo.externalId);
+            }
+            const ids = [c.id];
+            await prisma.$transaction([
+              prisma.approval.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.activityLog.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.memoryEntry.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.creditLedgerEntry.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.task.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.integration.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.provisionRecord.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.landingPage.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.dailyBrief.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.kpiSnapshot.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.transferRecord.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.llmUsageDay.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.dataExport.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.companyPlan.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.agentState.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.subscription.deleteMany({ where: { companyId: { in: ids } } }),
+              prisma.company.deleteMany({ where: { id: { in: ids } } }),
+            ]);
+            console.log(`[scheduler] deleted company ${c.id} ("${c.name}") incl. site + repo`);
+          } catch (err) {
+            console.error(`[scheduler] company deletion failed for ${c.id}:`, err);
+          }
         }
       }
 

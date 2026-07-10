@@ -55,6 +55,7 @@ enum CompanyStatus {
   ACTIVE       // agents running
   PAUSED       // user-paused or subscription halted
   LAPSED       // cancelled — 90-day data retention window
+  DELETING     // owner requested deletion — worker tears down site/repo, then wipes rows
 }
 
 enum AgentType {
