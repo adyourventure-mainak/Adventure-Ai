@@ -180,6 +180,8 @@ model Company {
   phoneConsentAt DateTime? // DPDP: when the owner consented to storing/displaying the number
   facebookUrl  String?
   instagramUrl String?
+  youtubeUrl   String?
+  socialConsentAt DateTime? // DPDP: when the owner consented to storing/displaying the social links
 
   // Trial
   trialEndsAt DateTime? // set on TRIAL activation (now + 15 days)

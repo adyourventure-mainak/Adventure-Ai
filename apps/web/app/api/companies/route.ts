@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
-  const { idea, surprise, phone, phoneConsent } = parsed.data;
+  const { idea, surprise, phone, phoneConsent, socialConsent } = parsed.data;
   if (!surprise && (!idea || idea.trim().length < 10)) {
     return NextResponse.json(
       { error: "Describe your idea in at least a sentence, or use Surprise me." },
@@ -49,6 +49,44 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+  }
+
+  // Normalize social profile links; each must live on its expected host.
+  const normalizeSocial = (raw: string | undefined, host: string): string | null => {
+    if (!raw || !raw.trim()) return null;
+    let v = raw.trim();
+    if (!/^https?:\/\//i.test(v)) v = `https://${v.replace(/^@/, `${host}/`)}`;
+    try {
+      const u = new URL(v);
+      return u.hostname.replace(/^www\./, "").endsWith(host) ? u.toString() : null;
+    } catch {
+      return null;
+    }
+  };
+  const facebookUrl = normalizeSocial(parsed.data.facebookUrl, "facebook.com");
+  const instagramUrl = normalizeSocial(parsed.data.instagramUrl, "instagram.com");
+  const youtubeUrl =
+    normalizeSocial(parsed.data.youtubeUrl, "youtube.com") ??
+    normalizeSocial(parsed.data.youtubeUrl, "youtu.be");
+  for (const [given, normalized, label] of [
+    [parsed.data.facebookUrl, facebookUrl, "Facebook"],
+    [parsed.data.instagramUrl, instagramUrl, "Instagram"],
+    [parsed.data.youtubeUrl, youtubeUrl, "YouTube"],
+  ] as const) {
+    if (given?.trim() && !normalized) {
+      return NextResponse.json(
+        { error: `That doesn't look like a valid ${label} URL.` },
+        { status: 400 },
+      );
+    }
+  }
+  const hasSocials = Boolean(facebookUrl || instagramUrl || youtubeUrl);
+  // DPDP: storing/displaying the social links requires explicit consent.
+  if (hasSocials && !socialConsent) {
+    return NextResponse.json(
+      { error: "Please tick the consent box to store your social links, or leave them blank." },
+      { status: 400 },
+    );
   }
 
   // Per-owner cap: 5 company slots per month. Live companies (including ones
@@ -106,6 +144,10 @@ export async function POST(request: Request) {
       slug: slugify(foundation.companyName),
       phone: normalizedPhone,
       phoneConsentAt: normalizedPhone ? new Date() : null,
+      facebookUrl,
+      instagramUrl,
+      youtubeUrl,
+      socialConsentAt: hasSocials ? new Date() : null,
       ideaSummary: foundation.ideaSummary,
       positioning: foundation.positioning,
       brandVoice: foundation.brandVoice,

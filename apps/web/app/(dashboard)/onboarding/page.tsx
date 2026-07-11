@@ -17,6 +17,10 @@ export default function OnboardingPage() {
   const [idea, setIdea] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneConsent, setPhoneConsent] = useState(false);
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [socialConsent, setSocialConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +36,15 @@ export default function OnboardingPage() {
       const res = await fetch("/api/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          surprise ? { surprise: true, phone, phoneConsent } : { idea, phone, phoneConsent },
-        ),
+        body: JSON.stringify({
+          ...(surprise ? { surprise: true } : { idea }),
+          phone,
+          phoneConsent,
+          instagramUrl,
+          facebookUrl,
+          youtubeUrl,
+          socialConsent,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong");
@@ -105,6 +115,59 @@ export default function OnboardingPage() {
               . You can withdraw consent anytime by deleting your account.
             </span>
           </label>
+        </div>
+        <div className="mt-4">
+          <span className="text-sm font-medium text-ink-100">
+            Social profiles <span className="text-ink-400">(optional)</span>
+          </span>
+          <p className="mt-1 text-xs text-ink-400">
+            If you already have social pages, add them and your company website will link to
+            them. Leave blank to keep the site without social links.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            <input
+              type="url"
+              placeholder="Instagram URL"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              maxLength={300}
+              className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
+            />
+            <input
+              type="url"
+              placeholder="Facebook URL"
+              value={facebookUrl}
+              onChange={(e) => setFacebookUrl(e.target.value)}
+              maxLength={300}
+              className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
+            />
+            <input
+              type="url"
+              placeholder="YouTube URL"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              maxLength={300}
+              className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
+            />
+          </div>
+          {(instagramUrl.trim() || facebookUrl.trim() || youtubeUrl.trim()) && (
+            <label className="mt-2 flex items-start gap-2 text-xs text-ink-400">
+              <input
+                type="checkbox"
+                checked={socialConsent}
+                onChange={(e) => setSocialConsent(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                I consent to Adventure AI storing these links and displaying them on my company
+                website, as described in the{" "}
+                <a href="/privacy" className="underline hover:text-white" target="_blank">
+                  Privacy Policy
+                </a>
+                . You can withdraw consent anytime by removing the links or deleting your account.
+              </span>
+            </label>
+          )}
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <Button className="flex-1" disabled={idea.trim().length < 10} onClick={() => create(false)}>

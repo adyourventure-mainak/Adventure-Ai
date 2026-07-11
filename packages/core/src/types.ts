@@ -61,6 +61,14 @@ export const CreateCompanyInput = z.object({
   // DPDP: explicit consent to store & display the phone number. Required
   // when a phone is provided; the API stamps Company.phoneConsentAt.
   phoneConsent: z.boolean().default(false),
+  // Social profiles for the generated site footer (all optional). Loosely
+  // validated here; the API normalizes and checks the host.
+  facebookUrl: z.string().max(300).optional(),
+  instagramUrl: z.string().max(300).optional(),
+  youtubeUrl: z.string().max(300).optional(),
+  // DPDP: explicit consent to store & display the social links. Required
+  // when any link is provided; the API stamps Company.socialConsentAt.
+  socialConsent: z.boolean().default(false),
 });
 
 /** Design tokens type (from CompanyFoundationSchema.design), stored on Company.theme. */

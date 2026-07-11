@@ -17,7 +17,15 @@ Guidelines:
   first revenue, not "brand workshops".
 - If inventing an idea: pick a validated, niche, low-capital online business
   (SaaS, productized service, niche marketplace, content+tools). Avoid
-  crypto, gambling, and regulated categories.`;
+  crypto, gambling, and regulated categories.
+- Design: choose tokens that fit THIS business, not a default. Pick the accent
+  color from the industry's visual language (e.g. food=warm reds/oranges,
+  wellness=greens, legal/finance=deep blues, kids=bright playful hues) — do
+  not default to blue, orange, or green every time. Match style + font to the
+  audience: premium/boutique=elegant+serif, tech/SaaS=minimal or
+  corporate+sans, kids/creators/food=playful+rounded, gyms/events=bold. If the
+  owner's idea mentions any design preference, colors, or vibe, honor it
+  exactly. Two different companies should never end up with the same look.`;
 
 export interface FoundationResult {
   foundation: CompanyFoundation;
