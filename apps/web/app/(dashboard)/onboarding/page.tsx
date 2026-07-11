@@ -23,7 +23,8 @@ export default function OnboardingPage() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [socialConsent, setSocialConsent] = useState(false);
   const [loading, setLoading] = useState(false);
-  const phoneOk = phone.replace(/\D/g, "").length >= 8 && phoneConsent;
+  // Phone is optional; if given, it needs to look valid and have consent.
+  const phoneOk = !phone.trim() || (phone.replace(/\D/g, "").length >= 8 && phoneConsent);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +88,7 @@ export default function OnboardingPage() {
         />
         <div className="mt-4">
           <label htmlFor="phone" className="text-sm font-medium text-ink-100">
-            WhatsApp number <span className="text-brand-400">(required)</span>
+            WhatsApp number <span className="text-ink-400">(optional)</span>
           </label>
           <input
             id="phone"
@@ -195,8 +196,8 @@ export default function OnboardingPage() {
         </div>
         {!phoneOk && (
           <p className="mt-2 text-xs text-ink-400">
-            Add your WhatsApp number and tick its consent box to continue — your website&apos;s
-            Call and WhatsApp buttons need it.
+            Finish the WhatsApp number (with country code) and tick its consent box — or clear
+            the field to skip the Call &amp; WhatsApp buttons.
           </p>
         )}
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}

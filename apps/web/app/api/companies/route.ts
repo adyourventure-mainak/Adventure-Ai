@@ -34,22 +34,22 @@ export async function POST(request: Request) {
     );
   }
 
-  // WhatsApp number is required — the site's Call/WhatsApp buttons depend on
-  // it. Normalize to E.164-ish (digits + leading +).
-  const digits = (phone ?? "").replace(/[^\d+]/g, "");
-  if (digits.replace(/\D/g, "").length < 8) {
-    return NextResponse.json(
-      { error: "A WhatsApp number with country code is required — your website's Call and WhatsApp buttons use it." },
-      { status: 400 },
-    );
-  }
-  const normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
-  // DPDP: storing/displaying the number requires explicit consent.
-  if (!phoneConsent) {
-    return NextResponse.json(
-      { error: "Please tick the consent box for your WhatsApp number." },
-      { status: 400 },
-    );
+  // WhatsApp number is optional; the site's Call/WhatsApp buttons appear only
+  // when one is given. Normalize to E.164-ish (digits + leading +).
+  let normalizedPhone: string | null = null;
+  if (phone && phone.trim()) {
+    const digits = phone.replace(/[^\d+]/g, "");
+    if (digits.replace(/\D/g, "").length < 8) {
+      return NextResponse.json({ error: "Enter a valid WhatsApp number with country code." }, { status: 400 });
+    }
+    normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
+    // DPDP: storing/displaying the number requires explicit consent.
+    if (!phoneConsent) {
+      return NextResponse.json(
+        { error: "Please tick the consent box to store your WhatsApp number, or leave it blank." },
+        { status: 400 },
+      );
+    }
   }
 
   // Owners type just the account name/handle (or paste a URL) — build the link.
