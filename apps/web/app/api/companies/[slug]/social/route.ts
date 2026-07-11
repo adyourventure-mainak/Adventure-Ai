@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
+import { socialProfileUrl } from "@adventure/core";
 import { getUser } from "@/lib/auth";
 
 const Input = z.object({
@@ -8,19 +9,6 @@ const Input = z.object({
   instagramUrl: z.string().max(300).optional().or(z.literal("")),
   youtubeUrl: z.string().max(300).optional().or(z.literal("")),
 });
-
-function normalizeProfile(raw: string | undefined, host: string): string | null {
-  if (!raw || !raw.trim()) return null;
-  let v = raw.trim();
-  if (!/^https?:\/\//i.test(v)) v = `https://${v.replace(/^@/, `${host}/`)}`;
-  try {
-    const u = new URL(v);
-    if (!u.hostname.replace(/^www\./, "").endsWith(host)) return null;
-    return u.toString();
-  } catch {
-    return null;
-  }
-}
 
 /** Save the company's Facebook/Instagram profiles (used by the Social agent). */
 export async function PATCH(request: Request, { params }: { params: { slug: string } }) {
@@ -38,19 +26,17 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  const facebookUrl = normalizeProfile(parsed.data.facebookUrl, "facebook.com");
-  const instagramUrl = normalizeProfile(parsed.data.instagramUrl, "instagram.com");
-  const youtubeUrl =
-    normalizeProfile(parsed.data.youtubeUrl, "youtube.com") ??
-    normalizeProfile(parsed.data.youtubeUrl, "youtu.be");
+  const facebookUrl = socialProfileUrl(parsed.data.facebookUrl, "facebook");
+  const instagramUrl = socialProfileUrl(parsed.data.instagramUrl, "instagram");
+  const youtubeUrl = socialProfileUrl(parsed.data.youtubeUrl, "youtube");
   if (parsed.data.facebookUrl?.trim() && !facebookUrl) {
-    return NextResponse.json({ error: "That doesn't look like a facebook.com profile URL." }, { status: 400 });
+    return NextResponse.json({ error: "That doesn't look like a Facebook account name or URL." }, { status: 400 });
   }
   if (parsed.data.instagramUrl?.trim() && !instagramUrl) {
-    return NextResponse.json({ error: "That doesn't look like an instagram.com profile URL." }, { status: 400 });
+    return NextResponse.json({ error: "That doesn't look like an Instagram account name or URL." }, { status: 400 });
   }
   if (parsed.data.youtubeUrl?.trim() && !youtubeUrl) {
-    return NextResponse.json({ error: "That doesn't look like a youtube.com channel URL." }, { status: 400 });
+    return NextResponse.json({ error: "That doesn't look like a YouTube account name or URL." }, { status: 400 });
   }
 
   // DPDP: the owner submitting their own links is the consent act — stamp it;

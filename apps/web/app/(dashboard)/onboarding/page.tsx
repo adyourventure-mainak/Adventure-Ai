@@ -121,29 +121,30 @@ export default function OnboardingPage() {
             Social profiles <span className="text-ink-400">(optional)</span>
           </span>
           <p className="mt-1 text-xs text-ink-400">
-            If you already have social pages, add them and your company website will link to
+            Just the account name — we build the links for you (e.g. type{" "}
+            <span className="text-ink-100">@yourbrand</span>). Your company website will link to
             them. Leave blank to keep the site without social links.
           </p>
           <div className="mt-2 grid gap-2 sm:grid-cols-3">
             <input
-              type="url"
-              placeholder="Instagram URL"
+              type="text"
+              placeholder="Instagram — @username"
               value={instagramUrl}
               onChange={(e) => setInstagramUrl(e.target.value)}
               maxLength={300}
               className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
             />
             <input
-              type="url"
-              placeholder="Facebook URL"
+              type="text"
+              placeholder="Facebook — page name"
               value={facebookUrl}
               onChange={(e) => setFacebookUrl(e.target.value)}
               maxLength={300}
               className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
             />
             <input
-              type="url"
-              placeholder="YouTube URL"
+              type="text"
+              placeholder="YouTube — @channel"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               maxLength={300}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma, grantWelcomeCredits } from "@adventure/db";
-import { CreateCompanyInput, companyLimitForOwner, PLANS, FREE_TRIAL_DAYS } from "@adventure/core";
+import { CreateCompanyInput, companyLimitForOwner, PLANS, FREE_TRIAL_DAYS, socialProfileUrl } from "@adventure/core";
 import { generateCompanyFoundation, slugify, logActivity } from "@adventure/agents";
 import { getUser } from "@/lib/auth";
 
@@ -51,23 +51,10 @@ export async function POST(request: Request) {
     }
   }
 
-  // Normalize social profile links; each must live on its expected host.
-  const normalizeSocial = (raw: string | undefined, host: string): string | null => {
-    if (!raw || !raw.trim()) return null;
-    let v = raw.trim();
-    if (!/^https?:\/\//i.test(v)) v = `https://${v.replace(/^@/, `${host}/`)}`;
-    try {
-      const u = new URL(v);
-      return u.hostname.replace(/^www\./, "").endsWith(host) ? u.toString() : null;
-    } catch {
-      return null;
-    }
-  };
-  const facebookUrl = normalizeSocial(parsed.data.facebookUrl, "facebook.com");
-  const instagramUrl = normalizeSocial(parsed.data.instagramUrl, "instagram.com");
-  const youtubeUrl =
-    normalizeSocial(parsed.data.youtubeUrl, "youtube.com") ??
-    normalizeSocial(parsed.data.youtubeUrl, "youtu.be");
+  // Owners type just the account name/handle (or paste a URL) — build the link.
+  const facebookUrl = socialProfileUrl(parsed.data.facebookUrl, "facebook");
+  const instagramUrl = socialProfileUrl(parsed.data.instagramUrl, "instagram");
+  const youtubeUrl = socialProfileUrl(parsed.data.youtubeUrl, "youtube");
   for (const [given, normalized, label] of [
     [parsed.data.facebookUrl, facebookUrl, "Facebook"],
     [parsed.data.instagramUrl, instagramUrl, "Instagram"],
@@ -75,7 +62,7 @@ export async function POST(request: Request) {
   ] as const) {
     if (given?.trim() && !normalized) {
       return NextResponse.json(
-        { error: `That doesn't look like a valid ${label} URL.` },
+        { error: `That doesn't look like a valid ${label} account name or URL.` },
         { status: 400 },
       );
     }

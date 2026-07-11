@@ -2,3 +2,4 @@
 // so this index stays safe to import from client components.
 export * from "./plans";
 export * from "./types";
+export * from "./socials";
