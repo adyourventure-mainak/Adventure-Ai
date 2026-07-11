@@ -7,6 +7,7 @@ import { Badge, Card } from "@/components/ui";
 import { ActivityFeed } from "@/components/activity-feed";
 import { RequestTask } from "@/components/request-task";
 import { ForwardSupport } from "@/components/forward-support";
+import { GmbReviews } from "@/components/gmb-reviews";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,19 @@ export default async function CompanyPage({ params }: { params: { slug: string }
           </Card>
         </div>
       )}
+
+      <Card>
+        <h2 className="font-semibold">Client reviews on your website</h2>
+        <p className="mb-4 mt-1 text-sm text-ink-400">
+          Paste your Google Business (GMB) link — we scan it, pull your top 3 ratings &amp;
+          reviews, and publish a &quot;What our customers say&quot; section on your website.
+        </p>
+        <GmbReviews
+          slug={company.slug}
+          initialGmbUrl={company.gmbUrl}
+          initialReviews={(company.reviews as { author: string; rating: number; text: string }[] | null) ?? []}
+        />
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

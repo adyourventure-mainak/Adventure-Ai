@@ -17,6 +17,7 @@ export * from "./finance";
 export * from "./ads";
 export * from "./provisioning";
 export * from "./site";
+export * from "./reviews";
 export * as mailer from "./mailer";
 export * as github from "./github";
 export * as vercel from "./vercel";

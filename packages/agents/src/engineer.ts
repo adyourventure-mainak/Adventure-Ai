@@ -137,6 +137,8 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
       instagramUrl: instagramUrl ?? company.instagramUrl,
       youtubeUrl: company.youtubeUrl,
       linkedinUrl: company.linkedinUrl,
+      gmbUrl: company.gmbUrl,
+      reviews: company.reviews as { author: string; rating: number; text: string }[] | null,
       theme,
       copy: parsed.updatedCopy as LandingCopy,
     })) {

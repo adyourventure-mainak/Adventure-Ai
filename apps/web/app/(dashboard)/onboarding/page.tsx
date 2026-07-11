@@ -23,6 +23,7 @@ export default function OnboardingPage() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [socialConsent, setSocialConsent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const phoneOk = phone.replace(/\D/g, "").length >= 8 && phoneConsent;
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +87,7 @@ export default function OnboardingPage() {
         />
         <div className="mt-4">
           <label htmlFor="phone" className="text-sm font-medium text-ink-100">
-            WhatsApp number <span className="text-ink-400">(optional)</span>
+            WhatsApp number <span className="text-brand-400">(required)</span>
           </label>
           <input
             id="phone"
@@ -98,8 +99,8 @@ export default function OnboardingPage() {
             className="mt-1 w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
           />
           <p className="mt-1 text-xs text-ink-400">
-            Adds a WhatsApp chat button to your company's website (it will be publicly visible
-            there). Include the country code.
+            Your website gets a &quot;Call now&quot; button and a WhatsApp chat button so customers
+            can reach you (the number is publicly visible there). Include the country code.
           </p>
           <label className="mt-2 flex items-start gap-2 text-xs text-ink-400">
             <input
@@ -181,13 +182,23 @@ export default function OnboardingPage() {
           )}
         </div>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-          <Button className="flex-1" disabled={idea.trim().length < 10} onClick={() => create(false)}>
+          <Button
+            className="flex-1"
+            disabled={idea.trim().length < 10 || !phoneOk}
+            onClick={() => create(false)}
+          >
             Build this idea
           </Button>
-          <Button className="flex-1" variant="outline" onClick={() => create(true)}>
+          <Button className="flex-1" variant="outline" disabled={!phoneOk} onClick={() => create(true)}>
             🎲 Surprise me
           </Button>
         </div>
+        {!phoneOk && (
+          <p className="mt-2 text-xs text-ink-400">
+            Add your WhatsApp number and tick its consent box to continue — your website&apos;s
+            Call and WhatsApp buttons need it.
+          </p>
+        )}
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
       </Card>
 

@@ -57,6 +57,8 @@ export async function provisionCompany(companyId: string): Promise<void> {
             instagramUrl: company.instagramUrl,
             youtubeUrl: company.youtubeUrl,
             linkedinUrl: company.linkedinUrl,
+            gmbUrl: company.gmbUrl,
+            reviews: company.reviews as { author: string; rating: number; text: string }[] | null,
             theme: company.theme as CompanyTheme | null,
             copy,
           })) {

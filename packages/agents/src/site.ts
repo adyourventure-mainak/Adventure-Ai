@@ -23,6 +23,8 @@ export interface SiteParams {
   linkedinUrl?: string | null;
   theme?: CompanyTheme | null;
   copy: LandingCopy;
+  gmbUrl?: string | null;
+  reviews?: { author: string; rating: number; text: string }[] | null;
 }
 
 const DEFAULT_ACCENT = "#fb7f14";
@@ -184,6 +186,15 @@ const CSS = `
   .card { border: 1px solid #eee; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
   .card h3 { margin-bottom: 8px; }
   .card p { color: var(--muted); font-size: 15px; margin: 0; }
+  .reviews { padding: 0 0 80px; }
+  .reviews h2 { text-align: center; margin-bottom: 32px; }
+  .reviews-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .reviews blockquote { margin: 0; }
+  .reviews .stars { color: #f5a623; letter-spacing: 2px; font-size: 15px; }
+  .reviews p { color: var(--muted); font-size: 15px; margin: 10px 0 12px; }
+  .reviews cite { font-style: normal; font-weight: 600; font-size: 14px; }
+  .reviews-more { text-align: center; margin-top: 24px; font-size: 14px; }
+  .reviews-more a { color: var(--accent-dark); }
   .faq { padding: 0 0 96px; max-width: 720px; margin: 0 auto; }
   .faq h2 { text-align: center; margin-bottom: 32px; }
   .faq details { border-bottom: 1px solid #eee; padding: 16px 0; }
@@ -323,6 +334,22 @@ export function renderSite(params: SiteParams): SitePage[] {
   // Structural variety: bold/corporate sites with an image use a side-by-side
   // hero instead of the stacked centered one.
   const splitHero = Boolean(images[0]) && (style === "bold" || style === "corporate");
+  // Google reviews (owner-provided GMB link, top 3 extracted).
+  const reviews = (params.reviews ?? []).slice(0, 3);
+  const stars = (n: number) => "★".repeat(Math.max(1, Math.min(5, Math.round(n)))) + "☆".repeat(5 - Math.max(1, Math.min(5, Math.round(n))));
+  const reviewsSection = reviews.length
+    ? `\n  <section class="reviews">
+    <h2>What our customers say</h2>
+    <div class="reviews-grid">
+${reviews
+  .map(
+    (r) => `      <blockquote class="card"><span class="stars" aria-label="${Math.round(r.rating)} out of 5 stars">${stars(r.rating)}</span><p>${esc(r.text)}</p><cite>— ${esc(r.author)}${params.gmbUrl ? ", on Google" : ""}</cite></blockquote>`,
+  )
+  .join("\n")}
+    </div>${params.gmbUrl ? `\n    <p class="reviews-more"><a href="${esc(params.gmbUrl)}" target="_blank" rel="noopener">See all our Google reviews →</a></p>` : ""}
+  </section>`
+    : "";
+
   const gallery = images.length > 1
     ? `\n  <section class="gallery">\n${images
         .slice(1)
@@ -357,7 +384,7 @@ export function renderSite(params: SiteParams): SitePage[] {
   </section>`) + `${gallery}
   <section class="features">
 ${copy.features.map((f) => `    <div><h3>${esc(f.title)}</h3><p>${esc(f.description)}</p></div>`).join("\n")}
-  </section>
+  </section>${reviewsSection}
   <section class="faq">
     <h2>FAQ</h2>
 ${copy.faq.map((q) => `    <details><summary>${esc(q.question)}</summary><p>${esc(q.answer)}</p></details>`).join("\n")}

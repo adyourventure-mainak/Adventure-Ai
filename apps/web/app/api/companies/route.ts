@@ -34,21 +34,22 @@ export async function POST(request: Request) {
     );
   }
 
-  // Normalize the WhatsApp number to E.164-ish (digits + leading +).
-  let normalizedPhone: string | null = null;
-  if (phone && phone.trim()) {
-    const digits = phone.replace(/[^\d+]/g, "");
-    if (digits.replace(/\D/g, "").length < 8) {
-      return NextResponse.json({ error: "Enter a valid WhatsApp number with country code." }, { status: 400 });
-    }
-    normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
-    // DPDP: storing/displaying the number requires explicit consent.
-    if (!phoneConsent) {
-      return NextResponse.json(
-        { error: "Please tick the consent box to store your WhatsApp number, or leave it blank." },
-        { status: 400 },
-      );
-    }
+  // WhatsApp number is required — the site's Call/WhatsApp buttons depend on
+  // it. Normalize to E.164-ish (digits + leading +).
+  const digits = (phone ?? "").replace(/[^\d+]/g, "");
+  if (digits.replace(/\D/g, "").length < 8) {
+    return NextResponse.json(
+      { error: "A WhatsApp number with country code is required — your website's Call and WhatsApp buttons use it." },
+      { status: 400 },
+    );
+  }
+  const normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
+  // DPDP: storing/displaying the number requires explicit consent.
+  if (!phoneConsent) {
+    return NextResponse.json(
+      { error: "Please tick the consent box for your WhatsApp number." },
+      { status: 400 },
+    );
   }
 
   // Owners type just the account name/handle (or paste a URL) — build the link.
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
   const [owned, deletedThisMonth] = await Promise.all([
     prisma.company.findMany({
       where: { ownerId: user.id },
-      select: { planTier: true },
+      select: { planTier: true, theme: true },
     }),
     prisma.deletedCompanySlot.count({
       where: { ownerId: user.id, deletedAt: { gte: monthStart } },
@@ -119,6 +120,28 @@ export async function POST(request: Request) {
     );
   }
   const { foundation, usage } = result;
+
+  // Every company this owner creates must look different: if the generated
+  // style (or font) repeats a sibling company's, rotate to an unused one.
+  // 5 styles × distinct picks = 5 visibly different sites per owner.
+  const STYLES = ["minimal", "bold", "playful", "elegant", "corporate"] as const;
+  const FONTS = ["sans", "serif", "rounded", "mono"] as const;
+  const siblingThemes = owned
+    .map((c) => c.theme as { style?: string; fontFamily?: string } | null)
+    .filter(Boolean);
+  const usedStyles = new Set(siblingThemes.map((t) => t!.style));
+  if (usedStyles.has(foundation.design.style)) {
+    const free = STYLES.filter((s) => !usedStyles.has(s));
+    if (free.length > 0) {
+      foundation.design.style = free[Math.floor(Math.random() * free.length)];
+      // Nudge the font too when the style rotated and the font also repeats.
+      const usedFonts = new Set(siblingThemes.map((t) => t!.fontFamily));
+      if (usedFonts.has(foundation.design.fontFamily)) {
+        const freeFonts = FONTS.filter((f) => !usedFonts.has(f));
+        if (freeFonts.length > 0) foundation.design.fontFamily = freeFonts[0];
+      }
+    }
+  }
 
   // Every new company starts a 2-day free trial: full Pro-level access, the
   // worker's scheduler lapses it via trialEndsAt, then billing takes over.

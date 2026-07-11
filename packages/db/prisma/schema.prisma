@@ -184,6 +184,10 @@ model Company {
   linkedinUrl  String?
   socialConsentAt DateTime? // DPDP: when the owner consented to storing/displaying the social links
 
+  // Google Business reviews shown on the company site
+  gmbUrl  String? // owner's Google My Business / Maps link
+  reviews Json?   // top 3 extracted reviews: [{ author, rating, text }]
+
   // Trial
   trialEndsAt DateTime? // set on TRIAL activation (now + 15 days)
 
