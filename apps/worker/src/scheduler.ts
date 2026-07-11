@@ -3,6 +3,7 @@ import { prisma } from "@adventure/db";
 import { queuePriority } from "@adventure/core";
 import { vercel, github } from "@adventure/agents";
 import type { AgentQueueName } from "./queues";
+import { sendLifecycleEmails } from "./emails";
 
 /**
  * DB-driven scheduler: the database is the source of truth, BullMQ is just the
@@ -234,6 +235,10 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
         );
         await prisma.task.update({ where: { id: t.id }, data: { status: "QUEUED" } });
       }
+
+      // 4. Owner lifecycle emails: daily activity reminders while the
+      //    subscription runs, weekly win-back once it stops.
+      await sendLifecycleEmails();
     } catch (err) {
       console.error("[scheduler] tick failed:", err);
     }

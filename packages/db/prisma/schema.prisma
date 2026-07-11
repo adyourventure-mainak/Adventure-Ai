@@ -200,6 +200,11 @@ model Company {
   updatedAt DateTime  @updatedAt
   lapsedAt  DateTime? // start of 90-day retention window
 
+  // Owner engagement
+  inboxSeenAt         DateTime? // last time the owner opened the Inbox — unread = deliverables after this
+  lastReminderEmailAt DateTime? // last daily activity-reminder email (active subscription)
+  lastWinbackEmailAt  DateTime? // last weekly win-back email (lapsed/cancelled subscription)
+
   subscription   Subscription?
   agentStates    AgentState[]
   tasks          Task[]

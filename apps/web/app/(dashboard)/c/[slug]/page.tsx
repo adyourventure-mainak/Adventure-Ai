@@ -48,6 +48,16 @@ export default async function CompanyPage({ params }: { params: { slug: string }
   const repo = company.provisions.find((p) => p.resource === "GITHUB_REPO" && p.status === "DONE");
   const credits = await creditBalance(company.id);
 
+  // Unread deliverables: inbox-bound tasks completed since the owner last opened the Inbox.
+  const unreadCount = await prisma.task.count({
+    where: {
+      companyId: company.id,
+      status: "COMPLETED",
+      agent: { in: ["SOCIAL", "EMAIL_OUTREACH", "SUPPORT", "ADS"] },
+      ...(company.inboxSeenAt ? { completedAt: { gt: company.inboxSeenAt } } : {}),
+    },
+  });
+
   const recentPosts = await prisma.task.findMany({
         where: { companyId: company.id, agent: "SOCIAL", status: "COMPLETED" },
         orderBy: { completedAt: "desc" },
@@ -67,7 +77,12 @@ export default async function CompanyPage({ params }: { params: { slug: string }
             <Badge variant="outline" className="cursor-pointer">Growth plan</Badge>
           </Link>
           <Link href={`/c/${company.slug}/inbox`}>
-            <Badge variant="default" className="cursor-pointer">Inbox</Badge>
+            <Badge
+              variant={unreadCount > 0 ? "default" : "outline"}
+              className={unreadCount > 0 ? "cursor-pointer bg-brand-500 text-ink-950" : "cursor-pointer"}
+            >
+              Inbox{unreadCount > 0 ? ` (${unreadCount})` : ""}
+            </Badge>
           </Link>
           <Link href={`/c/${company.slug}/billing`}>
             <Badge variant="outline" className="cursor-pointer">Billing &amp; settings</Badge>

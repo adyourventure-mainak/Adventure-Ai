@@ -36,6 +36,12 @@ export default async function InboxPage({ params }: { params: { slug: string } }
   });
   if (!company || company.ownerId !== user.id) notFound();
 
+  // Opening the Inbox marks everything read — the dashboard tab goes back to white.
+  await prisma.company.update({
+    where: { id: company.id },
+    data: { inboxSeenAt: new Date() },
+  });
+
   const items: InboxDeliverable[] = [];
   for (const t of company.tasks) {
     const base = {
