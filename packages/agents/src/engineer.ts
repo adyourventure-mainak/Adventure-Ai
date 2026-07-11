@@ -136,6 +136,7 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
       facebookUrl: facebookUrl ?? company.facebookUrl,
       instagramUrl: instagramUrl ?? company.instagramUrl,
       youtubeUrl: company.youtubeUrl,
+      linkedinUrl: company.linkedinUrl,
       theme,
       copy: parsed.updatedCopy as LandingCopy,
     })) {

@@ -20,6 +20,7 @@ export interface SiteParams {
   facebookUrl?: string | null;
   instagramUrl?: string | null;
   youtubeUrl?: string | null;
+  linkedinUrl?: string | null;
   theme?: CompanyTheme | null;
   copy: LandingCopy;
 }
@@ -238,6 +239,7 @@ function shell(params: {
   facebookUrl?: string | null;
   instagramUrl?: string | null;
   youtubeUrl?: string | null;
+  linkedinUrl?: string | null;
 }): string {
   const nav = (
     [
@@ -266,6 +268,7 @@ function shell(params: {
     params.facebookUrl ? `<a href="${esc(params.facebookUrl)}" target="_blank" rel="noopener">Facebook</a>` : "",
     params.instagramUrl ? `<a href="${esc(params.instagramUrl)}" target="_blank" rel="noopener">Instagram</a>` : "",
     params.youtubeUrl ? `<a href="${esc(params.youtubeUrl)}" target="_blank" rel="noopener">YouTube</a>` : "",
+    params.linkedinUrl ? `<a href="${esc(params.linkedinUrl)}" target="_blank" rel="noopener">LinkedIn</a>` : "",
   ].filter(Boolean).join(" · ");
   // Header contact button opens a WhatsApp chat with the company's number.
   const callNav = waLink
@@ -338,6 +341,7 @@ export function renderSite(params: SiteParams): SitePage[] {
     facebookUrl: params.facebookUrl,
     instagramUrl: params.instagramUrl,
     youtubeUrl: params.youtubeUrl,
+    linkedinUrl: params.linkedinUrl,
     body: (splitHero
       ? `  <section class="hero hero-split">
     <div>
@@ -371,6 +375,7 @@ ${copy.faq.map((q) => `    <details><summary>${esc(q.question)}</summary><p>${es
     facebookUrl: params.facebookUrl,
     instagramUrl: params.instagramUrl,
     youtubeUrl: params.youtubeUrl,
+    linkedinUrl: params.linkedinUrl,
     body: `  <section class="page">
     <h1>About ${esc(companyName)}</h1>
 ${params.tagline ? `    <p><strong>${esc(params.tagline)}</strong></p>` : ""}
@@ -393,6 +398,7 @@ ${params.positioning ? `    <h2>Who we serve</h2>\n    <p>${esc(params.positioni
     facebookUrl: params.facebookUrl,
     instagramUrl: params.instagramUrl,
     youtubeUrl: params.youtubeUrl,
+    linkedinUrl: params.linkedinUrl,
     body: `  <section class="page">
     <h1>What we offer</h1>
 ${copy.features
@@ -413,6 +419,7 @@ ${copy.features
     facebookUrl: params.facebookUrl,
     instagramUrl: params.instagramUrl,
     youtubeUrl: params.youtubeUrl,
+    linkedinUrl: params.linkedinUrl,
     body: `  <section class="page">
     <h1>Contact us</h1>
 ${waHref ? `    <p>Chat with us directly on WhatsApp — we usually reply within minutes.</p>\n    <p><a class="cta" href="${waHref}" target="_blank" rel="noopener">💬 Chat on WhatsApp</a></p>\n    <p>Or send us a message and we'll get back to you.</p>` : `    <p>Send us a message and we'll get back to you.</p>`}

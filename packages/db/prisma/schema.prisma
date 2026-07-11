@@ -181,6 +181,7 @@ model Company {
   facebookUrl  String?
   instagramUrl String?
   youtubeUrl   String?
+  linkedinUrl  String?
   socialConsentAt DateTime? // DPDP: when the owner consented to storing/displaying the social links
 
   // Trial

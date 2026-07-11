@@ -66,6 +66,7 @@ export const CreateCompanyInput = z.object({
   facebookUrl: z.string().max(300).optional(),
   instagramUrl: z.string().max(300).optional(),
   youtubeUrl: z.string().max(300).optional(),
+  linkedinUrl: z.string().max(300).optional(),
   // DPDP: explicit consent to store & display the social links. Required
   // when any link is provided; the API stamps Company.socialConsentAt.
   socialConsent: z.boolean().default(false),

@@ -55,10 +55,12 @@ export async function POST(request: Request) {
   const facebookUrl = socialProfileUrl(parsed.data.facebookUrl, "facebook");
   const instagramUrl = socialProfileUrl(parsed.data.instagramUrl, "instagram");
   const youtubeUrl = socialProfileUrl(parsed.data.youtubeUrl, "youtube");
+  const linkedinUrl = socialProfileUrl(parsed.data.linkedinUrl, "linkedin");
   for (const [given, normalized, label] of [
     [parsed.data.facebookUrl, facebookUrl, "Facebook"],
     [parsed.data.instagramUrl, instagramUrl, "Instagram"],
     [parsed.data.youtubeUrl, youtubeUrl, "YouTube"],
+    [parsed.data.linkedinUrl, linkedinUrl, "LinkedIn"],
   ] as const) {
     if (given?.trim() && !normalized) {
       return NextResponse.json(
@@ -67,7 +69,7 @@ export async function POST(request: Request) {
       );
     }
   }
-  const hasSocials = Boolean(facebookUrl || instagramUrl || youtubeUrl);
+  const hasSocials = Boolean(facebookUrl || instagramUrl || youtubeUrl || linkedinUrl);
   // DPDP: storing/displaying the social links requires explicit consent.
   if (hasSocials && !socialConsent) {
     return NextResponse.json(
@@ -134,6 +136,7 @@ export async function POST(request: Request) {
       facebookUrl,
       instagramUrl,
       youtubeUrl,
+      linkedinUrl,
       socialConsentAt: hasSocials ? new Date() : null,
       ideaSummary: foundation.ideaSummary,
       positioning: foundation.positioning,

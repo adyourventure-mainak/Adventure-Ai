@@ -4,12 +4,13 @@
  * input can't be turned into a link on the right platform.
  */
 
-export type SocialPlatform = "facebook" | "instagram" | "youtube";
+export type SocialPlatform = "facebook" | "instagram" | "youtube" | "linkedin";
 
 const HOSTS: Record<SocialPlatform, string[]> = {
   facebook: ["facebook.com", "fb.com"],
   instagram: ["instagram.com"],
   youtube: ["youtube.com", "youtu.be"],
+  linkedin: ["linkedin.com"],
 };
 
 // Handles: letters, digits, dot, underscore, hyphen (covers all three platforms).
@@ -42,5 +43,9 @@ export function socialProfileUrl(raw: string | undefined | null, platform: Socia
       return `https://instagram.com/${handle}`;
     case "youtube":
       return `https://youtube.com/@${handle}`;
+    case "linkedin":
+      // Bare handles are treated as company pages (this is a business site);
+      // owners with a personal profile can paste the /in/... URL instead.
+      return `https://linkedin.com/company/${handle}`;
   }
 }

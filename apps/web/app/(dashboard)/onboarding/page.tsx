@@ -20,6 +20,7 @@ export default function OnboardingPage() {
   const [instagramUrl, setInstagramUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [socialConsent, setSocialConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
@@ -43,6 +44,7 @@ export default function OnboardingPage() {
           instagramUrl,
           facebookUrl,
           youtubeUrl,
+          linkedinUrl,
           socialConsent,
         }),
       });
@@ -125,7 +127,7 @@ export default function OnboardingPage() {
             <span className="text-ink-100">@yourbrand</span>). Your company website will link to
             them. Leave blank to keep the site without social links.
           </p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
             <input
               type="text"
               placeholder="Instagram — @username"
@@ -150,8 +152,16 @@ export default function OnboardingPage() {
               maxLength={300}
               className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
             />
+            <input
+              type="text"
+              placeholder="LinkedIn — company name"
+              value={linkedinUrl}
+              onChange={(e) => setLinkedinUrl(e.target.value)}
+              maxLength={300}
+              className="w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
+            />
           </div>
-          {(instagramUrl.trim() || facebookUrl.trim() || youtubeUrl.trim()) && (
+          {(instagramUrl.trim() || facebookUrl.trim() || youtubeUrl.trim() || linkedinUrl.trim()) && (
             <label className="mt-2 flex items-start gap-2 text-xs text-ink-400">
               <input
                 type="checkbox"

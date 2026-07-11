@@ -8,6 +8,7 @@ const Input = z.object({
   facebookUrl: z.string().max(300).optional().or(z.literal("")),
   instagramUrl: z.string().max(300).optional().or(z.literal("")),
   youtubeUrl: z.string().max(300).optional().or(z.literal("")),
+  linkedinUrl: z.string().max(300).optional().or(z.literal("")),
 });
 
 /** Save the company's Facebook/Instagram profiles (used by the Social agent). */
@@ -29,6 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   const facebookUrl = socialProfileUrl(parsed.data.facebookUrl, "facebook");
   const instagramUrl = socialProfileUrl(parsed.data.instagramUrl, "instagram");
   const youtubeUrl = socialProfileUrl(parsed.data.youtubeUrl, "youtube");
+  const linkedinUrl = socialProfileUrl(parsed.data.linkedinUrl, "linkedin");
   if (parsed.data.facebookUrl?.trim() && !facebookUrl) {
     return NextResponse.json({ error: "That doesn't look like a Facebook account name or URL." }, { status: 400 });
   }
@@ -38,13 +40,16 @@ export async function PATCH(request: Request, { params }: { params: { slug: stri
   if (parsed.data.youtubeUrl?.trim() && !youtubeUrl) {
     return NextResponse.json({ error: "That doesn't look like a YouTube account name or URL." }, { status: 400 });
   }
+  if (parsed.data.linkedinUrl?.trim() && !linkedinUrl) {
+    return NextResponse.json({ error: "That doesn't look like a LinkedIn account name or URL." }, { status: 400 });
+  }
 
   // DPDP: the owner submitting their own links is the consent act — stamp it;
   // clearing every link withdraws it.
-  const hasSocials = Boolean(facebookUrl || instagramUrl || youtubeUrl);
+  const hasSocials = Boolean(facebookUrl || instagramUrl || youtubeUrl || linkedinUrl);
   await prisma.company.update({
     where: { id: company.id },
-    data: { facebookUrl, instagramUrl, youtubeUrl, socialConsentAt: hasSocials ? new Date() : null },
+    data: { facebookUrl, instagramUrl, youtubeUrl, linkedinUrl, socialConsentAt: hasSocials ? new Date() : null },
   });
-  return NextResponse.json({ ok: true, facebookUrl, instagramUrl, youtubeUrl });
+  return NextResponse.json({ ok: true, facebookUrl, instagramUrl, youtubeUrl, linkedinUrl });
 }
