@@ -198,6 +198,19 @@ export default function OnboardingPage() {
             🎲 Surprise me
           </Button>
         </div>
+        {idea.trim().length > 0 && idea.trim().length < 10 && (
+          <p className="mt-2 text-xs text-ink-400">
+            Describe the idea in a short sentence (at least 10 characters) — e.g.{" "}
+            <button
+              type="button"
+              className="underline hover:text-white"
+              onClick={() => setIdea("Eco-friendly packaging solutions for small businesses")}
+            >
+              &quot;Eco-friendly packaging solutions for small businesses&quot;
+            </button>
+            . The AI builds your whole company from it, so a little detail goes a long way.
+          </p>
+        )}
         {!phoneOk && (
           <p className="mt-2 text-xs text-ink-400">
             Finish the WhatsApp number — it must start with the country code (e.g. +91) — and
