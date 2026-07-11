@@ -11,7 +11,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen">
       <header className="border-b border-ink-800">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight">
+          <Link href="/dashboard" className="flex items-center gap-2.5 text-lg font-bold tracking-tight">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.png" alt="Adventure AI logo" className="h-9 w-9 rounded-lg" />
             Adventure <span className="text-brand-500">AI</span>
           </Link>
           <div className="flex items-center gap-4 text-sm">

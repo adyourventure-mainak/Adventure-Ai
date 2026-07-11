@@ -6,7 +6,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b border-ink-800 bg-ink-950/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-          <Link href="/" className="text-lg font-bold tracking-tight">
+          <Link href="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-mark.png" alt="Adventure AI logo" className="h-9 w-9 rounded-lg" />
             Adventure <span className="text-brand-500">AI</span>
           </Link>
           <nav className="flex items-center gap-6 text-sm text-ink-100">
