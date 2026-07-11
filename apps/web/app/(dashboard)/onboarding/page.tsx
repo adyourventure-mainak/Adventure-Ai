@@ -23,8 +23,11 @@ export default function OnboardingPage() {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [socialConsent, setSocialConsent] = useState(false);
   const [loading, setLoading] = useState(false);
-  // Phone is optional; if given, it needs to look valid and have consent.
-  const phoneOk = !phone.trim() || (phone.replace(/\D/g, "").length >= 8 && phoneConsent);
+  // Phone is optional; if given, it must start with a country code (+91…),
+  // look valid, and have consent.
+  const phoneOk =
+    !phone.trim() ||
+    (phone.trim().startsWith("+") && phone.replace(/\D/g, "").length >= 8 && phoneConsent);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +104,8 @@ export default function OnboardingPage() {
           />
           <p className="mt-1 text-xs text-ink-400">
             Your website gets a &quot;Call now&quot; button and a WhatsApp chat button so customers
-            can reach you (the number is publicly visible there). Include the country code.
+            can reach you (the number is publicly visible there). Must start with your country
+            code, e.g. <span className="text-ink-100">+91</span>.
           </p>
           <label className="mt-2 flex items-start gap-2 text-xs text-ink-400">
             <input
@@ -196,8 +200,8 @@ export default function OnboardingPage() {
         </div>
         {!phoneOk && (
           <p className="mt-2 text-xs text-ink-400">
-            Finish the WhatsApp number (with country code) and tick its consent box — or clear
-            the field to skip the Call &amp; WhatsApp buttons.
+            Finish the WhatsApp number — it must start with the country code (e.g. +91) — and
+            tick its consent box, or clear the field to skip the Call &amp; WhatsApp buttons.
           </p>
         )}
         {error && <p className="mt-4 text-sm text-red-400">{error}</p>}

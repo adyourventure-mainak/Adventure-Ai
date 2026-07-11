@@ -38,11 +38,19 @@ export async function POST(request: Request) {
   // when one is given. Normalize to E.164-ish (digits + leading +).
   let normalizedPhone: string | null = null;
   if (phone && phone.trim()) {
+    // Must start with the country code (e.g. +91) — a bare local number can't
+    // be turned into a working wa.me / tel: link.
+    if (!phone.trim().startsWith("+")) {
+      return NextResponse.json(
+        { error: "Start the WhatsApp number with your country code, e.g. +91 98765 43210." },
+        { status: 400 },
+      );
+    }
     const digits = phone.replace(/[^\d+]/g, "");
     if (digits.replace(/\D/g, "").length < 8) {
       return NextResponse.json({ error: "Enter a valid WhatsApp number with country code." }, { status: 400 });
     }
-    normalizedPhone = digits.startsWith("+") ? digits : `+${digits}`;
+    normalizedPhone = digits;
     // DPDP: storing/displaying the number requires explicit consent.
     if (!phoneConsent) {
       return NextResponse.json(
