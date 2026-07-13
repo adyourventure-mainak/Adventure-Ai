@@ -37,6 +37,32 @@ Razorpay prerequisites:
   `subscription.charged`, `subscription.halted`, `subscription.cancelled`,
   `payment.captured`, `transfer.processed`; set `RAZORPAY_WEBHOOK_SECRET`.
 
+## Secrets & security
+
+All credentials are read from environment variables — there are **no secrets
+hardcoded anywhere in the source**. Before deploying:
+
+- **Never commit an env file.** `.env`, `.env.local`, and `.env*.local` are
+  gitignored; only `.env.example` (placeholders only) is tracked. History has
+  been scanned — no real secret has ever been committed.
+- **Client vs server boundary.** Only `NEXT_PUBLIC_*` values reach the browser:
+  the Supabase URL, the Supabase anon/publishable key, and the Razorpay *key
+  id* (all public-safe). The `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_SECRET`,
+  `RAZORPAY_WEBHOOK_SECRET`, `OPENAI_API_KEY`, `GITHUB_TOKEN`, `VERCEL_TOKEN`,
+  `RESEND_API_KEY`, and DB URLs are server-only and must never get a
+  `NEXT_PUBLIC_`/`REACT_APP_` prefix.
+- **The Supabase anon key is only safe because of RLS.** `rls.sql` enables Row
+  Level Security deny-by-default on every table and the Supabase Data API stays
+  disabled — the app reaches Postgres via the service role (server-side) which
+  bypasses RLS. Run `rls.sql` on every environment; without it the anon key
+  would expose data.
+- **`BILLING_TEST_MODE` is a production footgun.** `=1` bypasses Razorpay
+  payment entirely. Keep it unset in production.
+- **Rotation.** If any key is ever pasted into source, a log, or a commit,
+  rotate it immediately (Supabase service role, Razorpay key/secret, OpenAI,
+  GitHub, Vercel, Resend all support regeneration) — a value that reached git
+  history stays there until history is rewritten.
+
 ## Phase status
 
 - ✅ Phase 1 — auth, multi-tenant schema, onboarding + AI idea generation, landing page
