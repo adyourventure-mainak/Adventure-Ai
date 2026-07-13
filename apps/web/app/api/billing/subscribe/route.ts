@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
   const sub = await razorpay.createSubscription({
     planId: razorpayPlanId,
-    notes: { companyId: company.id, tier, userEmail: user.email },
+    notes: { companyId: company.id, tier },
   });
 
   await prisma.subscription.upsert({

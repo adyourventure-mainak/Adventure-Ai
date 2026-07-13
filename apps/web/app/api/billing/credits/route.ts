@@ -54,7 +54,6 @@ export async function POST(request: Request) {
       type: "credit_pack",
       companyId: company.id,
       credits: String(pack.credits),
-      userEmail: user.email,
     },
   });
 

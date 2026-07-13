@@ -63,8 +63,11 @@ Relevant memory (may contain product facts and past decisions):
 ${memories.map((m) => `- [${m.agent}/${m.kind}] ${m.content}`).join("\n") || "(none)"}`,
       },
       {
+        // Data minimization: the customer's email is not needed to draft the
+        // reply, so it is never sent to the LLM (kept in the task payload only,
+        // for actual delivery).
         role: "user",
-        content: `Customer${payload.customerEmail ? ` (${payload.customerEmail})` : ""} wrote:\n\n${payload.customerMessage}\n\nDraft the reply.`,
+        content: `Customer wrote:\n\n${payload.customerMessage}\n\nDraft the reply.`,
       },
     ],
     response_format: zodResponseFormat(SupportDraftSchema, "support_reply"),

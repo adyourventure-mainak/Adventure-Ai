@@ -103,7 +103,7 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
       {
         const goners = await prisma.user.findMany({
           where: { deletedAt: { not: null }, companies: { none: {} } },
-          select: { id: true, email: true },
+          select: { id: true },
           take: 5,
         });
         for (const u of goners) {
@@ -127,7 +127,7 @@ export function startScheduler(queues: Record<AgentQueueName, Queue>) {
               prisma.deletedCompanySlot.deleteMany({ where: { ownerId: u.id } }),
               prisma.user.delete({ where: { id: u.id } }),
             ]);
-            console.log(`[scheduler] account fully deleted: ${u.email}`);
+            console.log(`[scheduler] account fully deleted: ${u.id}`);
           } catch (err) {
             console.error(`[scheduler] account cleanup failed for ${u.id}:`, err);
           }

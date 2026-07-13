@@ -74,7 +74,6 @@ export async function POST(request: Request) {
     notes: {
       type: "trial",
       companyId: company.id,
-      userEmail: user.email,
     },
   });
 
