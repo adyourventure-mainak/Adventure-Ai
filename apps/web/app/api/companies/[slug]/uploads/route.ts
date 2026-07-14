@@ -11,6 +11,33 @@ const BUCKET = "site-assets";
 const MAX_FILES = 5;
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel serverless request body cap is ~4.5 MB
 
+// Raster images only. Never trust the client's file.type — SVG (scriptable) and
+// anything else is rejected by sniffing the actual bytes, and the stored
+// content type comes from the sniff, not the request.
+const MAGIC: [string, (b: Uint8Array) => boolean][] = [
+  ["image/jpeg", (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff],
+  ["image/png", (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47],
+  ["image/gif", (b) => b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38],
+  [
+    "image/webp",
+    (b) =>
+      b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+  ],
+];
+const EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
+function sniffImageType(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null;
+  for (const [mime, test] of MAGIC) if (test(bytes)) return mime;
+  return null;
+}
+
 function storageConfigured() {
   return Boolean(
     (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
@@ -68,23 +95,27 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   await ensureBucket();
   const urls: string[] = [];
   for (const file of files) {
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: `"${file.name}" is not an image` }, { status: 400 });
-    }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: `"${file.name}" is over 4 MB — please use a smaller image` }, { status: 400 });
     }
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-    const path = `${company.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const mime = sniffImageType(bytes);
+    if (!mime) {
+      return NextResponse.json(
+        { error: `"${file.name}" is not a supported image — use JPEG, PNG, WebP, or GIF` },
+        { status: 400 },
+      );
+    }
+    const path = `${company.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${EXT[mime]}`;
     const upload = await fetch(`${supabaseUrl()}/storage/v1/object/${BUCKET}/${path}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
         apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        "Content-Type": file.type,
+        "Content-Type": mime,
         "x-upsert": "true",
       },
-      body: new Uint8Array(await file.arrayBuffer()),
+      body: bytes,
     });
     if (!upload.ok) {
       return NextResponse.json(
