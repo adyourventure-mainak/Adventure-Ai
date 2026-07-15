@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 
 /**
  * Scan the owner's Google My Business / Maps page and pull the top ratings
@@ -77,7 +77,7 @@ export async function extractGmbReviews(rawUrl: string): Promise<{ reviews: GmbR
     .slice(0, 60_000);
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("reviews"),
     messages: [
       {
         role: "system",
@@ -89,5 +89,5 @@ Return up to 3 of the best genuine customer reviews (prefer 5-star with substant
     response_format: zodResponseFormat(ExtractionSchema, "gmb_reviews"),
   });
   const parsed = completion.choices[0]?.message?.parsed;
-  return { reviews: parsed?.reviews ?? [], usage: usageFrom(completion.usage) };
+  return { reviews: parsed?.reviews ?? [], usage: usageFrom(completion.usage, modelFor("reviews")) };
 }

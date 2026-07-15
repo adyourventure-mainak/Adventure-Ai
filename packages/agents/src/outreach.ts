@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
@@ -44,7 +44,7 @@ export async function runOutreachTask(taskId: string): Promise<void> {
   const memories = await recallMemories(company.id, goal, 5);
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("outreach"),
     messages: [
       {
         role: "system",
@@ -66,7 +66,7 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
 
   const draft = completion.choices[0]?.message?.parsed;
   if (!draft) throw new Error("Outreach LLM returned no valid email");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("outreach"));
 
   // Draft ships straight to the company inbox as a ready-to-send email —
   // nothing is actually sent until an email integration is connected.

@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { AdPlanSchema, type AdPlan } from "@adventure/core";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 
 export interface AdPlanResult {
   adPlan: AdPlan;
@@ -25,7 +25,7 @@ export async function generateAdPlan(input: {
       : "No ad budget configured yet — plan should work for a small starter budget (₹3,000–₹10,000/month) and note where to spend first.";
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("adplan"),
     messages: [
       {
         role: "system",
@@ -52,5 +52,5 @@ export async function generateAdPlan(input: {
   const message = completion.choices[0]?.message;
   const adPlan = message?.parsed;
   if (!adPlan) throw new Error("Ad plan generation returned no parsed output");
-  return { adPlan, usage: usageFrom(completion.usage) };
+  return { adPlan, usage: usageFrom(completion.usage, modelFor("adplan")) };
 }

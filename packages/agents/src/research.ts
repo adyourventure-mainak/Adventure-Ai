@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { openai, model, usageFrom } from "./llm";
+import { openai, modelFor, usageFrom } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recentMemories } from "./memory";
@@ -39,7 +39,7 @@ export async function runResearchTask(taskId: string): Promise<void> {
   const memories = await recentMemories(company.id, 12);
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("research"),
     messages: [
       {
         role: "system",
@@ -62,7 +62,7 @@ ${memories.map((m) => `- [${m.agent}/${m.kind}] ${m.content}`).join("\n") || "(n
 
   const parsed = completion.choices[0]?.message?.parsed;
   if (!parsed) throw new Error("Research LLM returned no valid output");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("research"));
 
   for (const f of parsed.findings) {
     await saveMemory({

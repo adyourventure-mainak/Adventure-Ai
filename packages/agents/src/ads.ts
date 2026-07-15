@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
@@ -64,7 +64,7 @@ export async function runAdsTask(taskId: string): Promise<void> {
   const maxDailyRupees = Math.max(1, Math.floor(monthlyCapRupees / 30));
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("ads"),
     messages: [
       {
         role: "system",
@@ -87,7 +87,7 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
 
   const draft = completion.choices[0]?.message?.parsed;
   if (!draft) throw new Error("Ads LLM returned no valid campaign");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("ads"));
 
   // Hard clamp regardless of what the LLM proposed.
   draft.dailyBudgetRupees = Math.min(Math.max(1, draft.dailyBudgetRupees), maxDailyRupees);

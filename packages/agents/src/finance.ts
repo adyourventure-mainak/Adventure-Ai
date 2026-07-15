@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma, creditBalance } from "@adventure/db";
-import { openai, model, usageFrom } from "./llm";
+import { openai, modelFor, usageFrom } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory } from "./memory";
@@ -66,7 +66,7 @@ export async function runFinanceTask(taskId: string): Promise<void> {
   };
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("finance"),
     messages: [
       {
         role: "system",
@@ -82,7 +82,7 @@ plainly and point at what unblocks it.`,
 
   const parsed = completion.choices[0]?.message?.parsed;
   if (!parsed) throw new Error("Finance LLM returned no valid report");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("finance"));
 
   await prisma.kpiSnapshot.upsert({
     where: { companyId_date: { companyId: company.id, date: today } },

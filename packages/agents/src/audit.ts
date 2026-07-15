@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { BusinessAuditReportSchema, type BusinessAuditReport } from "@adventure/core";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 
 export interface BusinessAuditResult {
   report: BusinessAuditReport;
@@ -83,7 +83,7 @@ export async function generateBusinessAudit(input: {
   notes?: string;
 }): Promise<BusinessAuditResult> {
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("audit"),
     messages: [
       {
         role: "system",
@@ -110,5 +110,5 @@ export async function generateBusinessAudit(input: {
 
   const report = completion.choices[0]?.message?.parsed;
   if (!report) throw new Error("Audit generation returned no parsed output");
-  return { report, usage: usageFrom(completion.usage) };
+  return { report, usage: usageFrom(completion.usage, modelFor("audit")) };
 }

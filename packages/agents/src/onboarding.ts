@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { CompanyFoundationSchema, type CompanyFoundation } from "@adventure/core";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 
 const SYSTEM = `You are the founding strategist inside Adventure AI, an autonomous
 platform that builds and operates online businesses for solo founders in India
@@ -41,7 +41,7 @@ export async function generateCompanyFoundation(input: {
     : `Generate the full company foundation for this business idea:\n\n${input.idea}`;
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("onboarding"),
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: userPrompt },
@@ -55,7 +55,7 @@ export async function generateCompanyFoundation(input: {
     const refusal = message?.refusal ? ` (refusal: ${message.refusal})` : "";
     throw new Error(`Company generation did not return valid output${refusal}`);
   }
-  return { foundation, usage: usageFrom(completion.usage) };
+  return { foundation, usage: usageFrom(completion.usage, modelFor("onboarding")) };
 }
 
 /** URL-safe unique-ish slug from a company name. */

@@ -2,7 +2,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
 import { LandingCopySchema, type CompanyTheme, type LandingCopy } from "@adventure/core";
-import { openai, model, usageFrom } from "./llm";
+import { openai, modelFor, usageFrom } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
@@ -60,7 +60,7 @@ export async function runEngineerTask(taskId: string): Promise<void> {
   ].join("\n");
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("engineer"),
     messages: [
       {
         role: "system",
@@ -95,7 +95,7 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
 
   const parsed = completion.choices[0]?.message?.parsed;
   if (!parsed) throw new Error("Engineer LLM returned no valid edit");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("engineer"));
 
   // Apply requested visual/brand changes to the persistent theme + socials.
   const themePatch: Partial<CompanyTheme> = {};

@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { openai, model, usageFrom, type LlmUsage } from "./llm";
+import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recallMemories } from "./memory";
@@ -47,7 +47,7 @@ export async function runSupportTask(taskId: string): Promise<void> {
   const memories = await recallMemories(company.id, payload.customerMessage, 6);
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("support"),
     messages: [
       {
         role: "system",
@@ -75,7 +75,7 @@ ${memories.map((m) => `- [${m.agent}/${m.kind}] ${m.content}`).join("\n") || "(n
 
   const draft = completion.choices[0]?.message?.parsed;
   if (!draft) throw new Error("Support LLM returned no valid reply");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("support"));
 
   await sendReply(taskId, company.id, payload, draft, usage);
 }

@@ -1,7 +1,7 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
 import { prisma, Prisma } from "@adventure/db";
-import { openai, model, usageFrom } from "./llm";
+import { openai, modelFor, usageFrom } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recentMemories } from "./memory";
@@ -95,7 +95,7 @@ export async function runDailyCycle(companyId: string): Promise<{ dispatched: st
   if (existingBrief) return { dispatched: [] }; // one cycle per day is idempotent
 
   const completion = await openai().beta.chat.completions.parse({
-    model: model(),
+    model: modelFor("orchestrator"),
     messages: [
       {
         role: "system",
@@ -140,7 +140,7 @@ ${JSON.stringify(company.landingPage?.copy ?? {})}`,
 
   const parsed = completion.choices[0]?.message?.parsed;
   if (!parsed) throw new Error("Orchestrator LLM returned no valid cycle output");
-  const usage = usageFrom(completion.usage);
+  const usage = usageFrom(completion.usage, modelFor("orchestrator"));
 
   await prisma.dailyBrief.create({
     data: { companyId, date: new Date(today), content: parsed.brief },
