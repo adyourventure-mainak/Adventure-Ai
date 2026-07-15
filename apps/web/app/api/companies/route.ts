@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
   const { idea, surprise, phone, phoneConsent, socialConsent } = parsed.data;
+  const location = parsed.data.location?.trim() || undefined;
   if (!surprise && (!idea || idea.trim().length < 10)) {
     return NextResponse.json(
       { error: "Describe your idea in at least a sentence, or use Surprise me." },
@@ -117,97 +118,120 @@ export async function POST(request: Request) {
     );
   }
 
-  let result;
-  try {
-    result = await generateCompanyFoundation({ idea, surprise });
-  } catch (err) {
-    console.error("[companies] generation failed:", err);
-    return NextResponse.json(
-      { error: "The AI could not generate your company right now. Please try again." },
-      { status: 502 },
-    );
-  }
-  const { foundation, usage } = result;
+  // Everything above validates synchronously and returns real HTTP statuses.
+  // Generation takes ~30-60s, so from here progress streams to the founder as
+  // SSE: one event per field the model actually reaches, then the slug.
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: Record<string, unknown>) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      try {
+        const { foundation, usage } = await generateCompanyFoundation({
+          idea,
+          surprise,
+          location,
+          onProgress: (step) => send({ step }),
+        });
 
-  // Every company this owner creates must look different: if the generated
-  // style (or font) repeats a sibling company's, rotate to an unused one.
-  // 5 styles × distinct picks = 5 visibly different sites per owner.
-  const STYLES = ["minimal", "bold", "playful", "elegant", "corporate"] as const;
-  const FONTS = ["sans", "serif", "rounded", "mono"] as const;
-  const siblingThemes = owned
-    .map((c) => c.theme as { style?: string; fontFamily?: string } | null)
-    .filter(Boolean);
-  const usedStyles = new Set(siblingThemes.map((t) => t!.style));
-  if (usedStyles.has(foundation.design.style)) {
-    const free = STYLES.filter((s) => !usedStyles.has(s));
-    if (free.length > 0) {
-      foundation.design.style = free[Math.floor(Math.random() * free.length)];
-      // Nudge the font too when the style rotated and the font also repeats.
-      const usedFonts = new Set(siblingThemes.map((t) => t!.fontFamily));
-      if (usedFonts.has(foundation.design.fontFamily)) {
-        const freeFonts = FONTS.filter((f) => !usedFonts.has(f));
-        if (freeFonts.length > 0) foundation.design.fontFamily = freeFonts[0];
+        // Every company this owner creates must look different: if the generated
+        // style (or font) repeats a sibling company's, rotate to an unused one.
+        // 5 styles × distinct picks = 5 visibly different sites per owner.
+        const STYLES = ["minimal", "bold", "playful", "elegant", "corporate"] as const;
+        const FONTS = ["sans", "serif", "rounded", "mono"] as const;
+        const siblingThemes = owned
+          .map((c) => c.theme as { style?: string; fontFamily?: string } | null)
+          .filter(Boolean);
+        const usedStyles = new Set(siblingThemes.map((t) => t!.style));
+        if (usedStyles.has(foundation.design.style)) {
+          const free = STYLES.filter((s) => !usedStyles.has(s));
+          if (free.length > 0) {
+            foundation.design.style = free[Math.floor(Math.random() * free.length)];
+            // Nudge the font too when the style rotated and the font also repeats.
+            const usedFonts = new Set(siblingThemes.map((t) => t!.fontFamily));
+            if (usedFonts.has(foundation.design.fontFamily)) {
+              const freeFonts = FONTS.filter((f) => !usedFonts.has(f));
+              if (freeFonts.length > 0) foundation.design.fontFamily = freeFonts[0];
+            }
+          }
+        }
+
+        send({ step: "saving" });
+        // Every new company starts a 2-day free trial: full Pro-level access, the
+        // worker's scheduler lapses it via trialEndsAt, then billing takes over.
+        const company = await prisma.company.create({
+          data: {
+            ownerId: user.id,
+            planTier: "TRIAL",
+            status: "PROVISIONING",
+            taskCyclesPerDay: PLANS.TRIAL.taskCyclesPerDay,
+            trialEndsAt: new Date(Date.now() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000),
+            name: foundation.companyName,
+            slug: slugify(foundation.companyName),
+            location,
+            phone: normalizedPhone,
+            phoneConsentAt: normalizedPhone ? new Date() : null,
+            facebookUrl,
+            instagramUrl,
+            youtubeUrl,
+            linkedinUrl,
+            socialConsentAt: hasSocials ? new Date() : null,
+            ideaSummary: foundation.ideaSummary,
+            positioning: foundation.positioning,
+            brandVoice: foundation.brandVoice,
+            theme: foundation.design,
+            plan: { create: { thirtyDayPlan: foundation.thirtyDayPlan } },
+            landingPage: { create: { copy: foundation.landingCopy } },
+            agentStates: {
+              create: AGENTS.map((agent) => ({ agent, enabled: false })),
+            },
+          },
+          select: { id: true, slug: true },
+        });
+
+        await grantWelcomeCredits(company.id);
+        await logActivity({
+          companyId: company.id,
+          agent: "FINANCE",
+          action: `Your ${FREE_TRIAL_DAYS}-day free trial has started — everything is unlocked`,
+          isPublic: false,
+        });
+        await logActivity({
+          companyId: company.id,
+          agent: "ORCHESTRATOR",
+          action: surprise
+            ? `Invented and validated a niche idea, founded "${foundation.companyName}"`
+            : `Founded "${foundation.companyName}" from your idea`,
+          detail: { tagline: foundation.tagline, ...(location ? { location } : {}) },
+          usage,
+        });
+        await logActivity({
+          companyId: company.id,
+          agent: "PLANNER",
+          action: "Drafted the 30-day launch plan",
+        });
+        await logActivity({
+          companyId: company.id,
+          agent: "ENGINEER",
+          action: "Generated landing page copy — preview available (deploys on Pro)",
+        });
+
+        send({ done: true, slug: company.slug });
+      } catch (err) {
+        // Detail stays server-side; the founder gets a generic message.
+        console.error("[companies] generation failed:", err);
+        send({ error: "The AI could not generate your company right now. Please try again." });
+      } finally {
+        controller.close();
       }
-    }
-  }
-
-  // Every new company starts a 2-day free trial: full Pro-level access, the
-  // worker's scheduler lapses it via trialEndsAt, then billing takes over.
-  const company = await prisma.company.create({
-    data: {
-      ownerId: user.id,
-      planTier: "TRIAL",
-      status: "PROVISIONING",
-      taskCyclesPerDay: PLANS.TRIAL.taskCyclesPerDay,
-      trialEndsAt: new Date(Date.now() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000),
-      name: foundation.companyName,
-      slug: slugify(foundation.companyName),
-      phone: normalizedPhone,
-      phoneConsentAt: normalizedPhone ? new Date() : null,
-      facebookUrl,
-      instagramUrl,
-      youtubeUrl,
-      linkedinUrl,
-      socialConsentAt: hasSocials ? new Date() : null,
-      ideaSummary: foundation.ideaSummary,
-      positioning: foundation.positioning,
-      brandVoice: foundation.brandVoice,
-      theme: foundation.design,
-      plan: { create: { thirtyDayPlan: foundation.thirtyDayPlan } },
-      landingPage: { create: { copy: foundation.landingCopy } },
-      agentStates: {
-        create: AGENTS.map((agent) => ({ agent, enabled: false })),
-      },
     },
-    select: { id: true, slug: true },
   });
 
-  await grantWelcomeCredits(company.id);
-  await logActivity({
-    companyId: company.id,
-    agent: "FINANCE",
-    action: `Your ${FREE_TRIAL_DAYS}-day free trial has started — everything is unlocked`,
-    isPublic: false,
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
   });
-  await logActivity({
-    companyId: company.id,
-    agent: "ORCHESTRATOR",
-    action: surprise
-      ? `Invented and validated a niche idea, founded "${foundation.companyName}"`
-      : `Founded "${foundation.companyName}" from your idea`,
-    detail: { tagline: foundation.tagline },
-    usage,
-  });
-  await logActivity({
-    companyId: company.id,
-    agent: "PLANNER",
-    action: "Drafted the 30-day launch plan",
-  });
-  await logActivity({
-    companyId: company.id,
-    agent: "ENGINEER",
-    action: "Generated landing page copy — preview available (deploys on Pro)",
-  });
-
-  return NextResponse.json({ slug: company.slug });
 }

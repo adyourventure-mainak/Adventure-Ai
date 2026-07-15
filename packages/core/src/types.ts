@@ -52,9 +52,31 @@ export const CompanyFoundationSchema = z.object({
 
 export type CompanyFoundation = z.infer<typeof CompanyFoundationSchema>;
 
+/**
+ * The top-level CompanyFoundationSchema keys, in the order Structured Outputs
+ * emits them. Onboarding streams the generation and reports a step the moment
+ * the model reaches that key, so the progress the founder watches is the real
+ * thing rather than a timer. Keep this in sync with the schema field order.
+ */
+export const FOUNDATION_STEPS = [
+  { key: "companyName", label: "Naming your company" },
+  { key: "tagline", label: "Writing the tagline" },
+  { key: "ideaSummary", label: "Shaping the idea" },
+  { key: "positioning", label: "Positioning it against the market" },
+  { key: "brandVoice", label: "Finding the brand voice" },
+  { key: "landingCopy", label: "Writing your landing page" },
+  { key: "design", label: "Choosing colours & typography" },
+  { key: "thirtyDayPlan", label: "Building your 30-day launch plan" },
+] as const;
+
+export type FoundationStepKey = (typeof FOUNDATION_STEPS)[number]["key"];
+
 export const CreateCompanyInput = z.object({
   idea: z.string().max(2000).optional(),
   surprise: z.boolean().default(false),
+  // City/region the business serves. Optional — when given, idea generation is
+  // grounded in that market's demand, categories and seasonality.
+  location: z.string().max(120).optional(),
   // WhatsApp contact number for the generated site (optional). Loosely
   // validated here; the API normalizes to E.164.
   phone: z.string().max(20).optional(),

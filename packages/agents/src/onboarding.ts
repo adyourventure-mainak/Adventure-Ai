@@ -1,5 +1,10 @@
 import { zodResponseFormat } from "openai/helpers/zod";
-import { CompanyFoundationSchema, type CompanyFoundation } from "@adventure/core";
+import {
+  CompanyFoundationSchema,
+  FOUNDATION_STEPS,
+  type CompanyFoundation,
+  type FoundationStepKey,
+} from "@adventure/core";
 import { openai, modelFor, usageFrom, type LlmUsage } from "./llm";
 
 const SYSTEM = `You are the founding strategist inside Adventure AI, an autonomous
@@ -27,6 +32,28 @@ Guidelines:
   owner's idea mentions any design preference, colors, or vibe, honor it
   exactly. Two different companies should never end up with the same look.`;
 
+/** Extra guidance when the owner told us where they operate. */
+function locationGuidance(location: string): string {
+  return `
+
+The owner operates in: ${location}.
+Ground the company in THAT market, using what you know about it:
+- Demand: what people there actually buy, realistic local price points and
+  buying power. Do not propose a business the local market cannot sustain.
+- Proven categories: favour business types with a real track record in or near
+  ${location} over generic global templates. If you are inventing the idea
+  ("surprise me"), pick something that demonstrably works in that region.
+- Context: local competition, seasonality and festivals that drive demand,
+  the languages customers use, and the channels/platforms they actually
+  buy through.
+- Copy: weave the location into positioning and landing copy where it earns
+  local trust and search traffic — naturally, not stuffed. If the business is
+  genuinely online-national, say so and don't force a local angle.
+- The 30-day plan should use channels that work in ${location} specifically.
+Be concrete about the place. Never invent statistics; reason from what you
+actually know about the region.`;
+}
+
 export interface FoundationResult {
   foundation: CompanyFoundation;
   usage: LlmUsage;
@@ -35,20 +62,45 @@ export interface FoundationResult {
 export async function generateCompanyFoundation(input: {
   idea?: string;
   surprise: boolean;
+  location?: string;
+  /**
+   * Fires as the model reaches each top-level field. Real progress, not a
+   * timer — the caller streams these straight to the founder's screen.
+   */
+  onProgress?: (step: FoundationStepKey) => void;
 }): Promise<FoundationResult> {
+  const where = input.location?.trim();
   const userPrompt = input.surprise
-    ? "Invent a validated niche business idea and generate the full company foundation for it."
+    ? `Invent a validated niche business idea${where ? ` that works in ${where}` : ""} and generate the full company foundation for it.`
     : `Generate the full company foundation for this business idea:\n\n${input.idea}`;
 
-  const completion = await openai().beta.chat.completions.parse({
+  const stream = openai().beta.chat.completions.stream({
     model: modelFor("onboarding"),
     messages: [
-      { role: "system", content: SYSTEM },
+      { role: "system", content: where ? SYSTEM + locationGuidance(where) : SYSTEM },
       { role: "user", content: userPrompt },
     ],
     response_format: zodResponseFormat(CompanyFoundationSchema, "company_foundation"),
+    // Streaming omits usage unless asked, and without it every onboarding call
+    // would cost 0 — silently disabling the daily LLM spend cap.
+    stream_options: { include_usage: true },
   });
 
+  if (input.onProgress) {
+    // Structured Outputs emit keys in schema order, so a key appearing in the
+    // accumulated JSON means the model has started that field.
+    const seen = new Set<string>();
+    stream.on("content.delta", ({ snapshot }) => {
+      for (const { key } of FOUNDATION_STEPS) {
+        if (!seen.has(key) && snapshot.includes(`"${key}"`)) {
+          seen.add(key);
+          input.onProgress!(key);
+        }
+      }
+    });
+  }
+
+  const completion = await stream.finalChatCompletion();
   const message = completion.choices[0]?.message;
   const foundation = message?.parsed;
   if (!foundation) {

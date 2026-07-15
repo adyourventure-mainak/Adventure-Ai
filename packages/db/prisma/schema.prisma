@@ -175,6 +175,10 @@ model Company {
   planTier      PlanTier      @default(FREE)
   autonomyLevel AutonomyLevel @default(APPROVE_OUTBOUND)
 
+  // Where the business operates — grounds idea generation in local demand and
+  // shows up in the site copy for local SEO. Coarse (city/region), owner-typed.
+  location String?
+
   // Contact & social
   phone          String?   // WhatsApp contact number (E.164, e.g. +919876543210)
   phoneConsentAt DateTime? // DPDP: when the owner consented to storing/displaying the number

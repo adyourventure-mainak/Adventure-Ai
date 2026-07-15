@@ -2,19 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { FOUNDATION_STEPS } from "@adventure/core";
 import { Button, Card, Textarea } from "@/components/ui";
 
-const LOADING_STEPS = [
-  "Validating the niche…",
-  "Naming your company…",
-  "Writing positioning & brand voice…",
-  "Drafting landing page copy…",
-  "Building your 30-day plan…",
+// The generator streams one event per field it actually reaches; "saving" is
+// the DB write that follows. No timers — every tick below is real progress.
+const STEPS: { key: string; label: string }[] = [
+  ...FOUNDATION_STEPS.map((s) => ({ key: s.key as string, label: s.label as string })),
+  { key: "saving", label: "Setting up your dashboard" },
 ];
 
 export default function OnboardingPage() {
   const router = useRouter();
   const [idea, setIdea] = useState("");
+  const [location, setLocation] = useState("");
   const [phone, setPhone] = useState("");
   const [phoneConsent, setPhoneConsent] = useState(false);
   const [instagramUrl, setInstagramUrl] = useState("");
@@ -28,22 +29,20 @@ export default function OnboardingPage() {
   const phoneOk =
     !phone.trim() ||
     (phone.trim().startsWith("+") && phone.replace(/\D/g, "").length >= 8 && phoneConsent);
-  const [step, setStep] = useState(0);
+  const [reached, setReached] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   async function create(surprise: boolean) {
     setLoading(true);
     setError(null);
-    const ticker = setInterval(
-      () => setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)),
-      4000,
-    );
+    setReached([]);
     try {
       const res = await fetch("/api/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(surprise ? { surprise: true } : { idea }),
+          location,
           phone,
           phoneConsent,
           instagramUrl,
@@ -53,23 +52,89 @@ export default function OnboardingPage() {
           socialConsent,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Something went wrong");
-      router.push(`/c/${data.slug}/design`);
+      // Validation failures come back as plain JSON with a real status code.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Something went wrong");
+      }
+      if (!res.body) throw new Error("Something went wrong");
+
+      // Progress stream: one event per field the model reaches, then the slug.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split("\n\n");
+        buffer = frames.pop() ?? "";
+        for (const frame of frames) {
+          const line = frame.trim();
+          if (!line.startsWith("data:")) continue;
+          const evt = JSON.parse(line.slice(5).trim()) as {
+            step?: string;
+            done?: boolean;
+            slug?: string;
+            error?: string;
+          };
+          if (evt.error) throw new Error(evt.error);
+          if (evt.step) setReached((r) => (r.includes(evt.step!) ? r : [...r, evt.step!]));
+          if (evt.done && evt.slug) {
+            router.push(`/c/${evt.slug}/design`);
+            return; // keep the loading view up through navigation
+          }
+        }
+      }
+      throw new Error("The connection dropped before your company was ready.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
-    } finally {
-      clearInterval(ticker);
     }
   }
 
   if (loading) {
+    // A step is "current" once reached and nothing after it has arrived yet.
+    const currentIdx = reached.length - 1;
     return (
-      <Card className="mx-auto mt-16 max-w-lg py-16 text-center">
-        <div className="mx-auto mb-6 h-10 w-10 animate-spin rounded-full border-2 border-ink-600 border-t-brand-500" />
-        <h2 className="text-lg font-semibold">Founding your company…</h2>
-        <p className="mt-2 text-sm text-ink-400">{LOADING_STEPS[step]}</p>
+      <Card className="mx-auto mt-16 max-w-lg py-12">
+        <div className="text-center">
+          <div className="mx-auto mb-5 h-10 w-10 animate-spin rounded-full border-2 border-ink-600 border-t-brand-500" />
+          <h2 className="text-lg font-semibold">Founding your company…</h2>
+          <p className="mt-2 text-sm text-ink-400">
+            {location.trim()
+              ? `Building it for ${location.trim()} — this takes under a minute.`
+              : "This takes under a minute."}
+          </p>
+        </div>
+        <ul className="mx-auto mt-8 max-w-xs space-y-2.5">
+          {STEPS.map((s, i) => {
+            const done = i < currentIdx;
+            const current = i === currentIdx;
+            return (
+              <li
+                key={s.key}
+                className={`flex items-center gap-3 text-sm transition-colors ${
+                  done ? "text-ink-400" : current ? "text-white" : "text-ink-600"
+                }`}
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                  {done ? (
+                    <span className="text-brand-400">✓</span>
+                  ) : current ? (
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
+                  ) : (
+                    <span className="h-1.5 w-1.5 rounded-full bg-ink-800" />
+                  )}
+                </span>
+                {s.label}
+              </li>
+            );
+          })}
+        </ul>
+        {reached.length === 0 && (
+          <p className="mt-6 text-center text-xs text-ink-600">Thinking through your idea…</p>
+        )}
       </Card>
     );
   }
@@ -89,6 +154,25 @@ export default function OnboardingPage() {
           onChange={(e) => setIdea(e.target.value)}
           maxLength={2000}
         />
+        <div className="mt-4">
+          <label htmlFor="location" className="text-sm font-medium text-ink-100">
+            Where do you operate? <span className="text-ink-400">(optional)</span>
+          </label>
+          <input
+            id="location"
+            type="text"
+            placeholder="e.g. Durgapur, West Bengal"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            maxLength={120}
+            className="mt-1 w-full rounded-lg border border-ink-800 bg-ink-950 px-3 py-2 text-sm text-white placeholder:text-ink-400 focus:border-brand-500 focus:outline-none"
+          />
+          <p className="mt-1 text-xs text-ink-400">
+            Your AI co-founder uses this to ground the idea in what actually sells there — local
+            demand, proven categories, seasonality and channels — and to write copy that ranks
+            locally. Leave blank for a location-neutral online business.
+          </p>
+        </div>
         <div className="mt-4">
           <label htmlFor="phone" className="text-sm font-medium text-ink-100">
             WhatsApp number <span className="text-ink-400">(optional)</span>
