@@ -1,21 +1,50 @@
 import Link from "next/link";
+import { prisma } from "@adventure/db";
 import { PLANS, CREDIT_PACKS, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE, FREE_TRIAL_DAYS } from "@adventure/core";
 import { Badge, Button, Card } from "@/components/ui";
 import { GlowCard } from "@/components/ui/spotlight-card";
+import { LiveFeedList, ExampleFeedList, type LiveFeed } from "@/components/live-feed";
 
-const DEMO_FEED = [
-  { agent: "CEO", action: "Wrote today's brief: focus on landing page conversion + 20 outreach emails" },
-  { agent: "Engineer", action: "Opened PR #14: add testimonials section to landing page — merged & deployed" },
-  { agent: "Research", action: "Analyzed 3 competitors; pricing gap found at ₹999/mo tier" },
-  { agent: "Email", action: "Drafted 20 personalized outreach emails — ready in your inbox" },
-  { agent: "Social", action: "Generated tomorrow's post: image, caption & tags — ready to share" },
-  { agent: "Finance", action: "Weekly P&L: revenue ₹42,300, ad spend ₹6,150, net +₹31,900" },
-];
+// The feed below is real, so the page can't be fully static. Re-render at most
+// once a minute — near-live without a DB hit per visitor.
+export const revalidate = 60;
+
+/**
+ * Most recently active company's public activity. isPublic is set by the
+ * agents themselves: financials, drafts and customer conversations are logged
+ * private and can never surface here.
+ */
+async function getLiveFeed(): Promise<LiveFeed> {
+  try {
+    const latest = await prisma.activityLog.findFirst({
+      where: { isPublic: true, company: { status: "ACTIVE" } },
+      orderBy: { createdAt: "desc" },
+      select: { companyId: true, company: { select: { name: true, slug: true } } },
+    });
+    if (!latest) return null;
+    const items = await prisma.activityLog.findMany({
+      where: { companyId: latest.companyId, isPublic: true },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: { id: true, agent: true, action: true, createdAt: true },
+    });
+    if (items.length === 0) return null;
+    // Only claim "live" if the agents actually did something recently; a day-old
+    // feed is real, but calling it live would be a stretch.
+    const fresh = Date.now() - items[0].createdAt.getTime() < 24 * 60 * 60 * 1000;
+    return { company: latest.company, items, fresh };
+  } catch (err) {
+    // This page prerenders at build time, so a DB blip must never fail the
+    // deploy of the marketing site — fall back to the labelled example.
+    console.error("[landing] live feed unavailable:", err);
+    return null;
+  }
+}
 
 const FAQ = [
   {
     q: "What does the AI actually do?",
-    a: "Nine specialized agents plan strategy, write and deploy code to your own GitHub repo, draft social posts and outreach emails, answer support tickets, run ads within your budget caps, and track finances — logging every action to a live feed you can watch.",
+    a: "Nine specialized agents plan strategy, write and deploy code to your own GitHub repo, draft social posts and outreach emails, answer support tickets, propose ad campaigns and budgets within your caps for you to approve, and track finances — logging every action to a live feed you can watch.",
   },
   {
     q: "Do I stay in control?",
@@ -68,7 +97,8 @@ const HERO_PLANS = [
   },
 ];
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const feed = await getLiveFeed();
   return (
     <main>
       {/* Hero — asymmetric split: pitch + plan ladder left, live feed right */}
@@ -116,19 +146,22 @@ export default function LandingPage() {
         {/* Live feed inside the spotlight card — the signature element */}
         <GlowCard customSize glowColor="orange" className="hidden p-0 lg:block">
           <div className="flex items-center justify-between border-b border-ink-800 px-5 py-3.5">
-            <h2 className="text-sm font-semibold">Live from a company run by Adventure AI</h2>
-            <Badge variant="success">● live</Badge>
+            <h2 className="text-sm font-semibold">
+              {feed
+                ? `${feed.fresh ? "Live from" : "Recently, at"} ${feed.company.name}, run by Adventure AI`
+                : "What a day looks like"}
+            </h2>
+            {feed ? (
+              feed.fresh ? (
+                <Badge variant="success">● live</Badge>
+              ) : (
+                <Badge variant="outline">recent</Badge>
+              )
+            ) : (
+              <Badge variant="outline">example</Badge>
+            )}
           </div>
-          <ul className="divide-y divide-ink-800/70">
-            {DEMO_FEED.map((item, i) => (
-              <li key={i} className="flex items-start gap-3 px-5 py-3 text-sm">
-                <Badge variant="outline" className="mt-0.5 w-20 shrink-0 justify-center text-xs">
-                  {item.agent}
-                </Badge>
-                <span className="text-ink-100/90">{item.action}</span>
-              </li>
-            ))}
-          </ul>
+          {feed ? <LiveFeedList feed={feed} /> : <ExampleFeedList />}
         </GlowCard>
       </section>
 
@@ -136,19 +169,22 @@ export default function LandingPage() {
       <section className="mx-auto max-w-6xl px-6 pb-24 lg:hidden">
         <Card className="p-0">
           <div className="flex items-center justify-between border-b border-ink-800 px-5 py-3.5">
-            <h2 className="text-sm font-semibold">Live from a company run by Adventure AI</h2>
-            <Badge variant="success">● live</Badge>
+            <h2 className="text-sm font-semibold">
+              {feed
+                ? `${feed.fresh ? "Live from" : "Recently, at"} ${feed.company.name}, run by Adventure AI`
+                : "What a day looks like"}
+            </h2>
+            {feed ? (
+              feed.fresh ? (
+                <Badge variant="success">● live</Badge>
+              ) : (
+                <Badge variant="outline">recent</Badge>
+              )
+            ) : (
+              <Badge variant="outline">example</Badge>
+            )}
           </div>
-          <ul className="divide-y divide-ink-800">
-            {DEMO_FEED.map((item, i) => (
-              <li key={i} className="flex items-start gap-3 px-5 py-3 text-sm">
-                <Badge variant="outline" className="mt-0.5 w-20 shrink-0 justify-center text-xs">
-                  {item.agent}
-                </Badge>
-                <span className="text-ink-100/90">{item.action}</span>
-              </li>
-            ))}
-          </ul>
+          {feed ? <LiveFeedList feed={feed} /> : <ExampleFeedList />}
         </Card>
       </section>
 

@@ -8,6 +8,7 @@ import { ActivityFeed } from "@/components/activity-feed";
 import { RequestTask } from "@/components/request-task";
 import { ForwardSupport } from "@/components/forward-support";
 import { GmbReviews } from "@/components/gmb-reviews";
+import { FinanceProposalCard, type FinanceProposal } from "@/components/finance-proposal";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,16 @@ export default async function CompanyPage({ params }: { params: { slug: string }
       ...(company.inboxSeenAt ? { completedAt: { gt: company.inboxSeenAt } } : {}),
     },
   });
+
+  // Latest Finance run — its forward-looking proposal (budget/platform/revenue)
+  // is shown separately from any actual numbers.
+  const latestFinance = await prisma.task.findFirst({
+    where: { companyId: company.id, agent: "FINANCE", status: "COMPLETED" },
+    orderBy: { completedAt: "desc" },
+    select: { result: true },
+  });
+  const financeProposal =
+    (latestFinance?.result as { proposal?: FinanceProposal } | null)?.proposal ?? null;
 
   const recentPosts = await prisma.task.findMany({
         where: { companyId: company.id, agent: "SOCIAL", status: "COMPLETED" },
@@ -154,6 +165,15 @@ export default async function CompanyPage({ params }: { params: { slug: string }
             <ForwardSupport slug={company.slug} />
           </Card>
         </div>
+      )}
+
+      {financeProposal && (
+        <Card>
+          <FinanceProposalCard
+            proposal={financeProposal}
+            adBudgetCapRupees={Math.round(company.adBudgetCapP / 100)}
+          />
+        </Card>
       )}
 
       <Card>
