@@ -22,6 +22,9 @@ export default async function InboxPage({ params }: { params: { slug: string } }
       name: true,
       slug: true,
       ownerId: true,
+      instagramUrl: true,
+      facebookUrl: true,
+      linkedinUrl: true,
       plan: { select: { adPlan: true } },
       tasks: {
         where: {
@@ -58,6 +61,7 @@ export default async function InboxPage({ params }: { params: { slug: string } }
           text: post.text,
           imageUrl: post.imageUrl,
           hashtags: post.hashtags,
+          platform: post.platform,
         });
     } else if (t.agent === "EMAIL_OUTREACH") {
       const email = (t.result as EmailResult | null)?.email;
@@ -119,7 +123,16 @@ export default async function InboxPage({ params }: { params: { slug: string } }
       ) : (
         <div className="space-y-4">
           {items.map((item) => (
-            <InboxItem key={item.id} slug={company.slug} item={item} />
+            <InboxItem
+              key={item.id}
+              slug={company.slug}
+              item={item}
+              socials={{
+                instagramUrl: company.instagramUrl,
+                facebookUrl: company.facebookUrl,
+                linkedinUrl: company.linkedinUrl,
+              }}
+            />
           ))}
         </div>
       )}

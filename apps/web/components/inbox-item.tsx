@@ -11,7 +11,15 @@ export interface InboxDeliverable {
   text: string; // the main copy-able body
   imageUrl?: string;
   hashtags?: string[];
+  platform?: string; // the network the Social agent wrote this for
   extra?: { label: string; value: string }[]; // subject, audience, targeting…
+}
+
+/** The company's own profile links, so "post it" lands on their page. */
+export interface CompanySocials {
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  linkedinUrl?: string | null;
 }
 
 function shareText(item: InboxDeliverable): string {
@@ -20,8 +28,84 @@ function shareText(item: InboxDeliverable): string {
   return `${item.text}${tags}${img}`;
 }
 
-export function InboxItem({ slug, item }: { slug: string; item: InboxDeliverable }) {
+/** Caption only — composers take the image separately, so no URL noise. */
+function caption(item: InboxDeliverable): string {
+  const tags = item.hashtags?.length ? "\n\n" + item.hashtags.map((h) => `#${h}`).join(" ") : "";
+  return `${item.text}${tags}`;
+}
+
+type Target = {
+  key: string;
+  label: string;
+  href: string;
+  /** Whether the network actually accepts a prefilled caption over a URL. */
+  prefills: boolean;
+  className: string;
+};
+
+/**
+ * Where a post can be taken to be published. Only X and LinkedIn accept a
+ * prefilled caption via URL; Instagram has no web composer intent at all and
+ * Facebook ignores prefilled text, so for those we put the caption on the
+ * clipboard and open the company's own page to paste into.
+ */
+function targetsFor(item: InboxDeliverable, socials: CompanySocials): Target[] {
+  const text = encodeURIComponent(caption(item));
+  const all: Target[] = [
+    {
+      key: "twitter",
+      label: "Post on X",
+      href: `https://twitter.com/intent/tweet?text=${text}`,
+      prefills: true,
+      className: "bg-white text-black",
+    },
+    {
+      key: "linkedin",
+      label: "Post on LinkedIn",
+      href: `https://www.linkedin.com/feed/?shareActive=true&text=${text}`,
+      prefills: true,
+      className: "bg-[#0A66C2] text-white",
+    },
+    {
+      key: "instagram",
+      label: "Post on Instagram",
+      href: socials.instagramUrl || "https://www.instagram.com/",
+      prefills: false,
+      className: "bg-[#E1306C] text-white",
+    },
+    {
+      key: "facebook",
+      label: "Post on Facebook",
+      href: socials.facebookUrl || "https://www.facebook.com/",
+      prefills: false,
+      className: "bg-[#1877F2] text-white",
+    },
+  ];
+  const linked = new Set(
+    [
+      socials.instagramUrl ? "instagram" : null,
+      socials.facebookUrl ? "facebook" : null,
+      socials.linkedinUrl ? "linkedin" : null,
+    ].filter(Boolean) as string[],
+  );
+  // Social's schema emits exactly: twitter | linkedin | instagram | facebook.
+  const written = item.platform?.toLowerCase();
+  // Show the network this post was written for, plus any the company linked.
+  const show = all.filter((t) => t.key === written || linked.has(t.key));
+  return show.length > 0 ? show : all.filter((t) => t.key === "twitter");
+}
+
+export function InboxItem({
+  slug,
+  item,
+  socials = {},
+}: {
+  slug: string;
+  item: InboxDeliverable;
+  socials?: CompanySocials;
+}) {
   const [copied, setCopied] = useState(false);
+  const [pasteReady, setPasteReady] = useState<string | null>(null);
   const [rated, setRated] = useState<"up" | "down" | null>(null);
   const [note, setNote] = useState("");
   const [askNote, setAskNote] = useState(false);
@@ -30,6 +114,17 @@ export function InboxItem({ slug, item }: { slug: string; item: InboxDeliverable
     await navigator.clipboard.writeText(shareText(item));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  // Networks that can't take a prefilled caption still shouldn't mean retyping
+  // it — put it on the clipboard on the way out, so the tab opens paste-ready.
+  async function openTarget(t: Target) {
+    if (!t.prefills) {
+      await navigator.clipboard.writeText(caption(item)).catch(() => {});
+      setPasteReady(t.label);
+      setTimeout(() => setPasteReady(null), 6000);
+    }
+    window.open(t.href, "_blank", "noopener,noreferrer");
   }
 
   // Feedback loop: ratings become embedded memories the agents recall on
@@ -110,6 +205,21 @@ export function InboxItem({ slug, item }: { slug: string; item: InboxDeliverable
         >
           Share on WhatsApp
         </a>
+        {item.kind === "Social post" &&
+          targetsFor(item, socials).map((t) => (
+            <button
+              key={t.key}
+              onClick={() => openTarget(t)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-90 ${t.className}`}
+              title={
+                t.prefills
+                  ? "Opens the composer with your caption filled in — you press post"
+                  : "Copies your caption and opens your page — paste it in and attach the image"
+              }
+            >
+              {t.label} ↗
+            </button>
+          ))}
         <span className="ml-auto flex items-center gap-2 text-xs text-ink-400">
           {rated ? (
             <span className="text-emerald-400">✓ Thanks — your agents will learn from this</span>
@@ -126,6 +236,13 @@ export function InboxItem({ slug, item }: { slug: string; item: InboxDeliverable
           )}
         </span>
       </div>
+      {pasteReady && (
+        <p className="mt-3 rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-400">
+          Caption copied — paste it into {pasteReady}
+          {item.imageUrl ? ", and attach the image you downloaded" : ""}. {pasteReady} doesn&apos;t
+          let apps prefill a post, so this last step is yours.
+        </p>
+      )}
       {askNote && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <input
