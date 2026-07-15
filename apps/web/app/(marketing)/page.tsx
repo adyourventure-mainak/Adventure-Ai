@@ -15,17 +15,31 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * Agents write company names, slugs and deploy URLs into their own log lines,
  * so strip those before a line is shown publicly on the landing page. The feed
  * is anonymous: no visitor should be able to tell which company did what.
+ *
+ * The name is woven into prose ("your BrewGlobe coffee", "SurgiKart's
+ * platform"), so a flat swap to "the company" mangles the grammar. Handle the
+ * possessive and determiner cases first, and only fall back to "the company"
+ * where the name stands alone as a noun.
  */
 function anonymise(action: string, name: string, slug: string): string {
+  const n = escapeRe(name);
+  const s = escapeRe(slug);
   return (
     action
       // Full URLs (deployed sites, repos, image links).
       .replace(/https?:\/\/\S+/gi, "the live site")
       // owner/repo-slug pairs, before the bare slug rule below.
-      .replace(new RegExp(`\\b[\\w.-]+/${escapeRe(slug)}\\b`, "gi"), "the repo")
-      .replace(new RegExp(escapeRe(slug), "gi"), "the company")
-      .replace(new RegExp(escapeRe(name), "gi"), "the company")
+      .replace(new RegExp(`\\b[\\w.-]+/${s}\\b`, "gi"), "the repo")
+      // "BrewGlobe's beans" / "brewglobe-x1's beans" → "the company's beans"
+      .replace(new RegExp(`\\b(?:${n}|${s})['’]s\\b`, "gi"), "the company's")
+      // "your BrewGlobe coffee" → "your coffee" (determiner already there)
+      .replace(new RegExp(`\\b(your|our|the|this|a|an)\\s+(?:${n}|${s})\\b`, "gi"), "$1")
+      // Anything left standing alone as a noun.
+      .replace(new RegExp(`\\b(?:${n}|${s})\\b`, "gi"), "the company")
+      // Bare slug fragments that aren't word-bounded (e.g. inside a filename).
+      .replace(new RegExp(s, "gi"), "the company")
       .replace(/\s{2,}/g, " ")
+      .replace(/\s+([,.!?;:])/g, "$1")
       .trim()
   );
 }
