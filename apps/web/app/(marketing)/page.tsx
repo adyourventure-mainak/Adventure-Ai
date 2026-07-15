@@ -9,30 +9,57 @@ import { LiveFeedList, ExampleFeedList, type LiveFeed } from "@/components/live-
 // once a minute — near-live without a DB hit per visitor.
 export const revalidate = 60;
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /**
- * Most recently active company's public activity. isPublic is set by the
- * agents themselves: financials, drafts and customer conversations are logged
- * private and can never surface here.
+ * Agents write company names, slugs and deploy URLs into their own log lines,
+ * so strip those before a line is shown publicly on the landing page. The feed
+ * is anonymous: no visitor should be able to tell which company did what.
+ */
+function anonymise(action: string, name: string, slug: string): string {
+  return (
+    action
+      // Full URLs (deployed sites, repos, image links).
+      .replace(/https?:\/\/\S+/gi, "the live site")
+      // owner/repo-slug pairs, before the bare slug rule below.
+      .replace(new RegExp(`\\b[\\w.-]+/${escapeRe(slug)}\\b`, "gi"), "the repo")
+      .replace(new RegExp(escapeRe(slug), "gi"), "the company")
+      .replace(new RegExp(escapeRe(name), "gi"), "the company")
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  );
+}
+
+/**
+ * Public activity pooled across every running company, anonymised. isPublic is
+ * set by the agents themselves: financials, drafts and customer conversations
+ * are logged private and can never surface here.
  */
 async function getLiveFeed(): Promise<LiveFeed> {
   try {
-    const latest = await prisma.activityLog.findFirst({
+    const rows = await prisma.activityLog.findMany({
       where: { isPublic: true, company: { status: "ACTIVE" } },
       orderBy: { createdAt: "desc" },
-      select: { companyId: true, company: { select: { name: true, slug: true } } },
-    });
-    if (!latest) return null;
-    const items = await prisma.activityLog.findMany({
-      where: { companyId: latest.companyId, isPublic: true },
-      orderBy: { createdAt: "desc" },
       take: 6,
-      select: { id: true, agent: true, action: true, createdAt: true },
+      select: {
+        id: true,
+        agent: true,
+        action: true,
+        createdAt: true,
+        company: { select: { name: true, slug: true } },
+      },
     });
-    if (items.length === 0) return null;
+    if (rows.length === 0) return null;
+    const items = rows.map((r) => ({
+      id: r.id,
+      agent: r.agent,
+      createdAt: r.createdAt,
+      action: anonymise(r.action, r.company.name, r.company.slug),
+    }));
     // Only claim "live" if the agents actually did something recently; a day-old
     // feed is real, but calling it live would be a stretch.
     const fresh = Date.now() - items[0].createdAt.getTime() < 24 * 60 * 60 * 1000;
-    return { company: latest.company, items, fresh };
+    return { items, fresh };
   } catch (err) {
     // This page prerenders at build time, so a DB blip must never fail the
     // deploy of the marketing site — fall back to the labelled example.
@@ -148,7 +175,9 @@ export default async function LandingPage() {
           <div className="flex items-center justify-between border-b border-ink-800 px-5 py-3.5">
             <h2 className="text-sm font-semibold">
               {feed
-                ? `${feed.fresh ? "Live from" : "Recently, at"} ${feed.company.name}, run by Adventure AI`
+                ? feed.fresh
+                  ? "Live from companies run by Adventure AI"
+                  : "Recently, across companies run by Adventure AI"
                 : "What a day looks like"}
             </h2>
             {feed ? (
@@ -171,7 +200,9 @@ export default async function LandingPage() {
           <div className="flex items-center justify-between border-b border-ink-800 px-5 py-3.5">
             <h2 className="text-sm font-semibold">
               {feed
-                ? `${feed.fresh ? "Live from" : "Recently, at"} ${feed.company.name}, run by Adventure AI`
+                ? feed.fresh
+                  ? "Live from companies run by Adventure AI"
+                  : "Recently, across companies run by Adventure AI"
                 : "What a day looks like"}
             </h2>
             {feed ? (
