@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@adventure/db";
-import { fetchWebsiteText, generateBusinessAudit } from "@adventure/agents";
+import { fetchWebsiteText, generateBusinessAudit, isSafePublicUrl } from "@adventure/agents";
 import { getUser } from "@/lib/auth";
 
 export const maxDuration = 300; // audit generation is a long LLM call
@@ -11,20 +11,6 @@ const Input = z.object({
   businessName: z.string().max(200).optional(),
   notes: z.string().max(2000).optional(),
 });
-
-/** Reject non-http(s) URLs and obvious internal targets before fetching. */
-function isSafeUrl(raw: string): boolean {
-  try {
-    const u = new URL(raw);
-    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-    const host = u.hostname.toLowerCase();
-    if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) return false;
-    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host) || host.includes(":")) return false; // IP literals
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /** List the caller's audits (newest first, reports included). */
 export async function GET() {
@@ -52,7 +38,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Enter a valid website URL (https://…)" }, { status: 400 });
   }
   const { websiteUrl, businessName, notes } = parsed.data;
-  if (!isSafeUrl(websiteUrl)) {
+  if (!isSafePublicUrl(websiteUrl)) {
     return NextResponse.json({ error: "That URL can't be audited" }, { status: 400 });
   }
 
@@ -78,11 +64,18 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ id: audit.id, status: "READY" });
   } catch (err) {
+    // Detail stays server-side: raw fetch/LLM errors can carry internal
+    // hostnames and network info. The client gets a generic message plus the
+    // audit id to correlate against the logged failure.
     const message = err instanceof Error ? err.message : "Audit failed";
+    console.error(`[audits] generation failed for audit ${audit.id}:`, err);
     await prisma.businessAudit.update({
       where: { id: audit.id },
       data: { status: "FAILED", error: message },
     });
-    return NextResponse.json({ error: message, id: audit.id }, { status: 502 });
+    return NextResponse.json(
+      { error: "We couldn't audit that website. Check the URL is publicly reachable and try again.", id: audit.id },
+      { status: 502 },
+    );
   }
 }

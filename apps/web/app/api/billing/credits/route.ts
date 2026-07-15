@@ -4,6 +4,7 @@ import { prisma, grantCredits } from "@adventure/db";
 import { CREDIT_PACKS } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
+import { billingTestMode } from "@/lib/billing";
 
 const Input = z.object({
   slug: z.string(),
@@ -36,9 +37,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Credits are for paid plans — upgrade first." }, { status: 403 });
   }
 
-  // BILLING_TEST_MODE=1: grant without payment while Razorpay website
-  // verification is pending. Remove the env var to restore real checkout.
-  if (process.env.BILLING_TEST_MODE === "1") {
+  // Test-mode bypass: never active on the production deployment.
+  if (billingTestMode()) {
     await grantCredits(
       company.id,
       pack.credits,

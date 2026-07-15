@@ -4,6 +4,7 @@ import { prisma, grantWelcomeCredits } from "@adventure/db";
 import { PLANS } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
+import { billingTestMode } from "@/lib/billing";
 
 const Input = z.object({
   slug: z.string(),
@@ -38,9 +39,9 @@ export async function POST(request: Request) {
     }
   }
 
-  // BILLING_TEST_MODE=1: activate without payment while Razorpay website
-  // verification is pending. No Subscription row is created — nothing to bill.
-  if (process.env.BILLING_TEST_MODE === "1") {
+  // Test-mode bypass: never active on the production deployment. No
+  // Subscription row is created — nothing to bill.
+  if (billingTestMode()) {
     const plan = PLANS[tier];
     await prisma.$transaction([
       prisma.company.update({
