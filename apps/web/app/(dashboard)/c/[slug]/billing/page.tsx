@@ -2,8 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PLANS, CREDIT_PACKS, formatINR, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
-import { Badge, Button, Card } from "@/components/ui";
+import {
+  PLANS,
+  CREDIT_PACKS,
+  formatINR,
+  TRIAL_DAYS,
+  TRIAL_PRICE_PAISE,
+  GST_PERCENT,
+  withGst,
+  applyCouponToBase,
+} from "@adventure/core";
+import { Badge, Button, Card, Input } from "@/components/ui";
 import { DeleteCompany } from "@/components/delete-company";
 
 declare global {
@@ -25,6 +34,39 @@ export default function BillingPage() {
     currentPeriodEnd: string | null;
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [couponMsg, setCouponMsg] = useState<string | null>(null);
+  // A validated 50/70% coupon held for the next trial/credit checkout.
+  const [discount, setDiscount] = useState<{ code: string; percentOff: number } | null>(null);
+
+  async function applyCoupon() {
+    if (!couponInput.trim()) return;
+    setApplyingCoupon(true);
+    setCouponMsg(null);
+    setError(null);
+    try {
+      const res = await fetch(`/api/companies/${slug}/coupon`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: couponInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Invalid coupon");
+      if (data.kind === "comp") {
+        router.push(`/c/${slug}?upgraded=1`);
+        return;
+      }
+      // 50/70% — hold it and apply at checkout.
+      setDiscount({ code: data.code, percentOff: data.percentOff });
+      setCouponMsg(`${data.percentOff}% off applied — it'll come off the trial and credit packs below.`);
+    } catch (e) {
+      setDiscount(null);
+      setCouponMsg(e instanceof Error ? e.message : "Invalid coupon");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/billing/status?slug=${slug}`)
@@ -103,7 +145,7 @@ export default function BillingPage() {
       const res = await fetch("/api/billing/trial", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
+        body: JSON.stringify({ slug, ...(discount ? { couponCode: discount.code } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
@@ -141,7 +183,7 @@ export default function BillingPage() {
       const res = await fetch("/api/billing/credits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, credits }),
+        body: JSON.stringify({ slug, credits, ...(discount ? { couponCode: discount.code } : {}) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start checkout");
@@ -177,8 +219,35 @@ export default function BillingPage() {
       <h1 className="text-2xl font-bold">Upgrade this company</h1>
       <p className="mt-2 text-sm text-ink-400">
         UPI Autopay and card mandates supported. Cancel anytime — you keep your repo and a full
-        data export for 90 days.
+        data export for 90 days. All prices shown are exclusive of {GST_PERCENT}% GST, added at
+        checkout.
       </p>
+
+      <Card className="mt-6">
+        <h2 className="font-semibold">Have a coupon?</h2>
+        <p className="mt-1 text-sm text-ink-400">
+          Enter a code from us — it can unlock a free plan or a discount.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <Input
+            placeholder="COUPON CODE"
+            value={couponInput}
+            onChange={(e) => setCouponInput(e.target.value)}
+            className="max-w-xs uppercase"
+          />
+          <Button
+            variant="outline"
+            disabled={applyingCoupon || couponInput.trim().length < 3}
+            onClick={applyCoupon}
+          >
+            {applyingCoupon ? "Applying…" : "Apply"}
+          </Button>
+          {discount && <Badge variant="success">{discount.percentOff}% off held</Badge>}
+        </div>
+        {couponMsg && (
+          <p className={`mt-2 text-sm ${discount ? "text-emerald-400" : "text-red-400"}`}>{couponMsg}</p>
+        )}
+      </Card>
 
       {status && status.planTier !== "FREE" && status.companyStatus !== "LAPSED" && (
         <Card className="mt-8">
@@ -215,12 +284,26 @@ export default function BillingPage() {
                 <Badge>{TRIAL_DAYS} days</Badge>
               </div>
               <p className="mt-1 text-sm text-ink-400">
-                Everything in Pro for {TRIAL_DAYS} more days — one-time{" "}
-                {formatINR(TRIAL_PRICE_PAISE)}, no mandate, no auto-renewal.
+                Everything in Pro for {TRIAL_DAYS} more days — one-time, no mandate, no
+                auto-renewal.{" "}
+                {discount ? (
+                  <span className="text-emerald-400">
+                    {discount.percentOff}% off: {formatINR(applyCouponToBase(TRIAL_PRICE_PAISE, discount.percentOff))}
+                  </span>
+                ) : (
+                  <>{formatINR(TRIAL_PRICE_PAISE)}</>
+                )}{" "}
+                + {GST_PERCENT}% GST ={" "}
+                <span className="font-semibold text-ink-100">
+                  {formatINR(withGst(discount ? applyCouponToBase(TRIAL_PRICE_PAISE, discount.percentOff) : TRIAL_PRICE_PAISE))}
+                </span>
+                .
               </p>
             </div>
             <Button disabled={loadingTier !== null} onClick={startTrial}>
-              {loadingTier === "TRIAL" ? "Opening checkout…" : `Try for ${formatINR(TRIAL_PRICE_PAISE)}`}
+              {loadingTier === "TRIAL"
+                ? "Opening checkout…"
+                : `Pay ${formatINR(withGst(discount ? applyCouponToBase(TRIAL_PRICE_PAISE, discount.percentOff) : TRIAL_PRICE_PAISE))}`}
             </Button>
           </div>
         </Card>
@@ -238,6 +321,9 @@ export default function BillingPage() {
               <p className="mt-4 text-3xl font-bold">
                 {formatINR(plan.pricePaise)}
                 <span className="text-sm font-normal text-ink-400"> /mo</span>
+              </p>
+              <p className="text-xs text-ink-400">
+                {formatINR(withGst(plan.pricePaise))}/mo incl. {GST_PERCENT}% GST
               </p>
               <ul className="mt-6 space-y-2 text-sm text-ink-100">
                 {plan.features.map((f) => (
@@ -275,9 +361,19 @@ export default function BillingPage() {
             <Card key={pack.credits} className="text-center">
               <p className="text-2xl font-bold">{pack.credits}</p>
               <p className="text-xs text-ink-400">credits</p>
-              <p className="mt-2 font-semibold">{formatINR(pack.pricePaise)}</p>
+              <p className="mt-2 font-semibold">
+                {discount ? (
+                  <>
+                    <span className="text-ink-500 line-through">{formatINR(pack.pricePaise)}</span>{" "}
+                    <span className="text-emerald-400">{formatINR(applyCouponToBase(pack.pricePaise, discount.percentOff))}</span>
+                  </>
+                ) : (
+                  formatINR(pack.pricePaise)
+                )}
+              </p>
               <p className="text-xs text-ink-400">
-                {formatINR(Math.round(pack.pricePaise / pack.credits))}/credit
+                + {GST_PERCENT}% GST ={" "}
+                {formatINR(withGst(discount ? applyCouponToBase(pack.pricePaise, discount.percentOff) : pack.pricePaise))}
               </p>
               <Button
                 variant="outline"

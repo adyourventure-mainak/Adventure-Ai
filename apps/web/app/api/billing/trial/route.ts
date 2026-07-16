@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma, grantWelcomeCredits } from "@adventure/db";
-import { PLANS, TRIAL_DAYS, TRIAL_PRICE_PAISE } from "@adventure/core";
+import { prisma, grantWelcomeCredits, validateCoupon, recordRedemption } from "@adventure/db";
+import { PLANS, TRIAL_DAYS, TRIAL_PRICE_PAISE, applyCouponToBase, withGst, gstOn } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 import { getUser } from "@/lib/auth";
 import { billingTestMode } from "@/lib/billing";
 
-const Input = z.object({ slug: z.string() });
+const Input = z.object({ slug: z.string(), couponCode: z.string().max(40).optional() });
 
 /**
  * Create a Razorpay Order for the paid trial (TRIAL_DAYS days). The webhook's
@@ -41,15 +41,38 @@ export async function POST(request: Request) {
     );
   }
 
-  // Test-mode bypass: never active on the production deployment.
-  if (billingTestMode()) {
-    const plan = PLANS.TRIAL;
+  // Optional coupon → discount the pre-tax base. GST applies to the net.
+  let couponId: string | null = null;
+  let base: number = TRIAL_PRICE_PAISE;
+  if (parsed.data.couponCode?.trim()) {
+    const check = await validateCoupon(parsed.data.couponCode, user.email);
+    if (!check.ok) return NextResponse.json({ error: check.error }, { status: 400 });
+    couponId = check.coupon.id;
+    base = applyCouponToBase(base, check.coupon.percentOff);
+  }
+  const amountP = withGst(base);
+
+  // Fully-discounted (100% coupon) or test mode → activate free, no order.
+  if (base <= 0 || billingTestMode()) {
+    if (couponId) {
+      try {
+        await recordRedemption({
+          couponId,
+          userId: user.id,
+          companyId: company.id,
+          appliedTo: "TRIAL",
+          amountOffP: TRIAL_PRICE_PAISE - base,
+        });
+      } catch {
+        return NextResponse.json({ error: "That coupon has just been fully used." }, { status: 409 });
+      }
+    }
     await prisma.$transaction([
       prisma.company.update({
         where: { id: company.id },
         data: {
           planTier: "TRIAL",
-          taskCyclesPerDay: plan.taskCyclesPerDay,
+          taskCyclesPerDay: PLANS.TRIAL.taskCyclesPerDay,
           status: "PROVISIONING",
           trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000),
           lapsedAt: null,
@@ -59,7 +82,7 @@ export async function POST(request: Request) {
         data: {
           companyId: company.id,
           agent: "FINANCE",
-          action: "Trial activated (billing test mode — no charge)",
+          action: couponId ? "Trial activated with coupon (no charge)" : "Trial activated (billing test mode — no charge)",
           isPublic: false,
         },
       }),
@@ -69,17 +92,20 @@ export async function POST(request: Request) {
   }
 
   const order = await razorpay.createOrder({
-    amountPaise: TRIAL_PRICE_PAISE,
+    amountPaise: amountP,
     receipt: `trial-${company.id.slice(-12)}-${Date.now()}`,
     notes: {
       type: "trial",
       companyId: company.id,
+      ...(couponId ? { couponId } : {}),
     },
   });
 
   return NextResponse.json({
     orderId: order.id,
-    amountPaise: TRIAL_PRICE_PAISE,
+    amountPaise: amountP,
+    baseP: base,
+    gstP: gstOn(base),
     companyName: company.name,
   });
 }

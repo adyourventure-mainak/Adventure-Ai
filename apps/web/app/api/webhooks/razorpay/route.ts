@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Prisma, prisma, grantCredits, grantWelcomeCredits } from "@adventure/db";
+import { Prisma, prisma, grantCredits, grantWelcomeCredits, recordRedemption } from "@adventure/db";
 import { PLANS, REVENUE_SHARE_PERCENT, TRIAL_DAYS } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 
@@ -160,6 +160,7 @@ async function handleEvent(event: {
             payment.order_id,
           );
         }
+        await redeemIfCoupon(payment.notes, "CREDITS");
         return;
       }
 
@@ -187,6 +188,7 @@ async function handleEvent(event: {
           }),
         ]);
         await grantWelcomeCredits(payment.notes.companyId);
+        await redeemIfCoupon(payment.notes, "TRIAL");
         return;
       }
 
@@ -214,6 +216,33 @@ async function handleEvent(event: {
 
     default:
       break;
+  }
+}
+
+/**
+ * Record a coupon redemption for a captured discounted order. Best-effort: the
+ * payment already succeeded, so a redemption-count race must not fail the
+ * webhook. Idempotent overall because the whole webhook is keyed on event id.
+ */
+async function redeemIfCoupon(
+  notes: Record<string, string>,
+  appliedTo: "TRIAL" | "CREDITS",
+): Promise<void> {
+  if (!notes.couponId || !notes.companyId) return;
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: notes.companyId },
+      select: { ownerId: true },
+    });
+    if (!company) return;
+    await recordRedemption({
+      couponId: notes.couponId,
+      userId: company.ownerId,
+      companyId: notes.companyId,
+      appliedTo,
+    });
+  } catch (err) {
+    console.error("[webhook] coupon redemption record failed:", err);
   }
 }
 

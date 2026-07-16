@@ -5,6 +5,7 @@ import { formatINR } from "@adventure/core";
 import { requireUser } from "@/lib/auth";
 import { Badge, Card } from "@/components/ui";
 import { AdminActions } from "@/components/admin-actions";
+import { CouponsAdmin } from "@/components/coupons-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,8 @@ export default async function AdminPage() {
           </tbody>
         </table>
       </Card>
+
+      <CouponsAdmin />
     </div>
   );
 }

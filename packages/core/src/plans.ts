@@ -120,10 +120,37 @@ export function companyLimitForOwner(ownedTiers: PlanTier[]): number {
 }
 
 export const CREDIT_PACKS = [
-  { credits: 10, pricePaise: 49900 },
-  { credits: 50, pricePaise: 199900 },
-  { credits: 100, pricePaise: 349900 },
+  { credits: 10, pricePaise: 9900 },   // ₹99
+  { credits: 25, pricePaise: 19900 },  // ₹199
+  { credits: 100, pricePaise: 39900 }, // ₹399
 ] as const;
+
+// GST added on top of every charge (India, 18%). Prices above are pre-tax.
+export const GST_PERCENT = 18;
+
+/** GST amount (paise) on a pre-tax base. */
+export function gstOn(basePaise: number): number {
+  return Math.round((basePaise * GST_PERCENT) / 100);
+}
+
+/** Total the customer actually pays: base + GST, in paise. */
+export function withGst(basePaise: number): number {
+  return basePaise + gstOn(basePaise);
+}
+
+// Coupons discount the PRE-TAX base; GST then applies to the discounted base.
+export const COUPON_PERCENTS = [50, 70, 100] as const;
+export type CouponPercent = (typeof COUPON_PERCENTS)[number];
+
+/** Normalise a user-typed coupon code to its canonical stored form. */
+export function normalizeCouponCode(raw: string): string {
+  return raw.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+/** Pre-tax base after applying a percent-off coupon (paise, rounded). */
+export function applyCouponToBase(basePaise: number, percentOff: number): number {
+  return Math.round((basePaise * (100 - percentOff)) / 100);
+}
 
 /** Revenue-share model removed — platform keeps 0%. Route payouts (if any) transfer in full. */
 export const REVENUE_SHARE_PERCENT = 0;
