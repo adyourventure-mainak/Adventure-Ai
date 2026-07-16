@@ -32,6 +32,7 @@ export type AgentModel =
   | "onboarding"
   | "audit"
   | "adplan"
+  | "calendar"
   | "engineer"
   | "orchestrator"
   | "support"
@@ -48,6 +49,7 @@ const TIER: Record<AgentModel, Tier> = {
   onboarding: "frontier",
   audit: "frontier",
   adplan: "frontier",
+  calendar: "mid",
   engineer: "mid",
   orchestrator: "mid",
   support: "mid",

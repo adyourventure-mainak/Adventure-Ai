@@ -5,6 +5,7 @@ import { openai, modelFor, usageFrom } from "./llm";
 import { logActivity } from "./activity";
 import { assertWithinLlmCaps } from "./guardrails";
 import { saveMemory, recentMemories } from "./memory";
+import { refreshContentCalendar } from "./calendar-refresh";
 
 const CycleOutputSchema = z.object({
   brief: z
@@ -227,6 +228,14 @@ ${JSON.stringify(company.landingPage?.copy ?? {})}`,
     kind: "learning",
     content: `${today}: ${parsed.memoryNote}`,
   });
+
+  // Roll the 3-day content calendar forward when it's stale. Best-effort: a
+  // failure here must never break the daily brief or dispatch.
+  try {
+    await refreshContentCalendar(company);
+  } catch (err) {
+    console.error(`[orchestrator] content calendar refresh failed for ${companyId}:`, err);
+  }
 
   return { dispatched };
 }

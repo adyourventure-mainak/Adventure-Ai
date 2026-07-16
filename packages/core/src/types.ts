@@ -156,6 +156,53 @@ export const AdPlanSchema = z.object({
 });
 export type AdPlan = z.infer<typeof AdPlanSchema>;
 
+/**
+ * Rolling 3-day social content calendar. One or two post slots per day, each
+ * tied to a real occasion the model can reason about from the date + location
+ * (a festival, a seasonal moment, an industry date) or a durable viral format
+ * — never a fabricated "currently trending" hashtag it cannot actually know.
+ */
+export const ContentCalendarSchema = z.object({
+  trendNote: z
+    .string()
+    .describe(
+      "One honest sentence: this plan is grounded in festivals/seasonality/industry moments and proven formats. Tell the founder to check today's live trending audio/hashtags on the platform before posting, since those can't be known in advance.",
+    ),
+  days: z
+    .array(
+      z.object({
+        date: z.string().describe("ISO date YYYY-MM-DD for this day"),
+        occasion: z
+          .string()
+          .describe(
+            "The real hook for this day — a named festival/observance relevant to the company's location, a seasonal or industry moment, or 'none' if it's an evergreen day.",
+          ),
+        posts: z
+          .array(
+            z.object({
+              platform: z.enum(["instagram", "facebook", "linkedin", "twitter"]),
+              format: z
+                .string()
+                .describe("The content format, e.g. Reel, carousel, single image, story poll, thread"),
+              theme: z.string().describe("The angle/idea in one line — what this post is about and why now"),
+              caption: z.string().describe("A ready-to-edit caption in the brand voice, platform-appropriate length"),
+              hashtags: z.array(z.string()).max(8).describe("Relevant hashtags WITHOUT the # prefix"),
+              bestTime: z.string().describe("Suggested local posting time, e.g. '7:30 PM' — when this audience is active"),
+              trendTieIn: z
+                .string()
+                .describe("How it rides the occasion or a durable viral format; or 'evergreen' if it doesn't"),
+            }),
+          )
+          .min(1)
+          .max(2)
+          .describe("1-2 posts for this day. Don't post for the sake of it."),
+      }),
+    )
+    .length(3)
+    .describe("Exactly 3 consecutive days starting from the given start date"),
+});
+export type ContentCalendar = z.infer<typeof ContentCalendarSchema>;
+
 /** Business audit for an existing business with a website: market research,
  *  SWOT, product/service scope, and a growth implementation plan. */
 export const BusinessAuditReportSchema = z.object({

@@ -1,10 +1,23 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@adventure/db";
-import { planAllows, type AdPlan, type CompanyFoundation } from "@adventure/core";
+import { planAllows, type AdPlan, type CompanyFoundation, type ContentCalendar } from "@adventure/core";
 import { requireUser } from "@/lib/auth";
 import { Badge, Button, Card } from "@/components/ui";
 import { GenerateAdPlanButton } from "./generate-button";
+import { ContentCalendarButton } from "./calendar-button";
+
+const PLATFORM_LABEL: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  twitter: "X",
+};
+
+function weekday(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+}
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +31,7 @@ export default async function GrowthPlanPage({ params }: { params: { slug: strin
 
   const launchPlan = (company.plan?.thirtyDayPlan ?? []) as CompanyFoundation["thirtyDayPlan"];
   const adPlan = company.plan?.adPlan as AdPlan | null;
+  const calendar = company.plan?.contentCalendar as ContentCalendar | null;
   const paid = planAllows(company.planTier, "AD_PLAN");
 
   return (
@@ -51,6 +65,75 @@ export default async function GrowthPlanPage({ params }: { params: { slug: strin
             </div>
           ))}
         </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">3-day content calendar</h2>
+            <p className="mt-1 text-sm text-ink-400">
+              Ready-to-post ideas for the next 3 days — tied to festivals, seasonality and your
+              industry. It rolls forward automatically each day.
+            </p>
+          </div>
+          <ContentCalendarButton slug={company.slug} regenerate={Boolean(calendar)} />
+        </div>
+
+        {!calendar ? (
+          <p className="mt-4 text-sm text-ink-400">
+            Not generated yet — click above, or wait for the next daily cycle.
+          </p>
+        ) : (
+          <>
+            {calendar.trendNote && (
+              <p className="mt-4 rounded-lg border border-ink-800 bg-ink-950/50 px-3 py-2 text-xs text-ink-400">
+                💡 {calendar.trendNote}
+              </p>
+            )}
+            <div className="mt-4 grid gap-4 md:grid-cols-3">
+              {calendar.days.map((day) => (
+                <div key={day.date} className="rounded-lg border border-ink-800 p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-brand-400">{weekday(day.date)}</h3>
+                  </div>
+                  {day.occasion && day.occasion.toLowerCase() !== "none" && (
+                    <p className="mt-1 text-xs font-medium text-ink-100">🎉 {day.occasion}</p>
+                  )}
+                  <div className="mt-3 space-y-3">
+                    {day.posts.map((post, i) => (
+                      <div key={i} className="rounded-md border border-ink-800/70 bg-ink-950/40 p-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">
+                            {PLATFORM_LABEL[post.platform] ?? post.platform}
+                          </Badge>
+                          <span className="text-[10px] uppercase tracking-wide text-ink-400">{post.format}</span>
+                          <span className="ml-auto text-[10px] text-ink-400">{post.bestTime}</span>
+                        </div>
+                        <p className="mt-2 text-sm font-medium text-ink-100">{post.theme}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-xs text-ink-300">{post.caption}</p>
+                        {post.hashtags.length > 0 && (
+                          <p className="mt-2 flex flex-wrap gap-1">
+                            {post.hashtags.map((h) => (
+                              <span key={h} className="text-[10px] text-brand-400">#{h}</span>
+                            ))}
+                          </p>
+                        )}
+                        {post.trendTieIn && post.trendTieIn.toLowerCase() !== "evergreen" && (
+                          <p className="mt-2 text-[10px] text-ink-400">↳ {post.trendTieIn}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {company.plan?.contentCalendarUpdatedAt && (
+              <p className="mt-3 text-xs text-ink-400">
+                Updated {company.plan.contentCalendarUpdatedAt.toLocaleDateString("en-IN")}
+              </p>
+            )}
+          </>
+        )}
       </Card>
 
       {!paid ? (
