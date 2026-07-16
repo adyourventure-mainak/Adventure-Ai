@@ -305,8 +305,9 @@ export default function OnboardingPage() {
       </Card>
 
       <p className="mt-4 text-xs text-ink-400">
-        Your company starts with a 2-day free trial — agents on, website deployed, everything
-        unlocked. After that, continue with the 7-day limited trial or Pro.
+        Your first company starts with a 3-day free trial — agents on, website deployed,
+        everything unlocked. After that (and for any further companies), continue with the ₹499
+        7-day trial or the ₹999/mo Pro plan.
       </p>
     </div>
   );

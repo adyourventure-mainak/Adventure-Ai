@@ -157,6 +157,7 @@ model User {
   isAdmin   Boolean   @default(false)
   createdAt DateTime  @default(now())
   deletedAt DateTime? // account deletion requested — worker finishes teardown
+  freeTrialUsedAt DateTime? // set the first time this owner is granted a free trial; gates it to once
 
   companies Company[]
   audits    BusinessAudit[]

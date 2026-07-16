@@ -6,10 +6,11 @@ export type PlanTier = "FREE" | "TRIAL" | "PRO" | "SCALE";
 
 // Trial: one-time payment unlocks Pro-level access for TRIAL_DAYS days
 // (per-company expiry stored on Company.trialEndsAt).
-export const TRIAL_PRICE_PAISE = 99900;
+export const TRIAL_PRICE_PAISE = 49900; // ₹499
 export const TRIAL_DAYS = 7;
-// Every new company starts with a free trial before any payment is asked.
-export const FREE_TRIAL_DAYS = 2;
+// One free trial per owner (by email): the first company gets FREE_TRIAL_DAYS
+// of full access before any payment is asked; later companies must pay.
+export const FREE_TRIAL_DAYS = 3;
 
 export interface PlanDef {
   tier: PlanTier;
@@ -42,15 +43,15 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     razorpayPlanEnv: null, // one-time order (notes.type = "trial"), not a subscription
     features: [
       "Everything in Pro",
-      "One-time ₹599 — no mandate",
-      "Valid for 15 days",
+      "One-time ₹499 — no mandate",
+      "Valid for 7 days",
       "1 nightly task cycle / day",
     ],
   },
   PRO: {
     tier: "PRO",
     name: "Pro",
-    pricePaise: 199900,
+    pricePaise: 99900, // ₹999/mo
     taskCyclesPerDay: 1,
     razorpayPlanEnv: "RAZORPAY_PLAN_PRO",
     features: [

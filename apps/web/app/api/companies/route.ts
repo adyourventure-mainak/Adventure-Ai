@@ -94,7 +94,7 @@ export async function POST(request: Request) {
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
-  const [owned, deletedThisMonth] = await Promise.all([
+  const [owned, deletedThisMonth, dbUser] = await Promise.all([
     prisma.company.findMany({
       where: { ownerId: user.id },
       select: { planTier: true, theme: true },
@@ -102,7 +102,11 @@ export async function POST(request: Request) {
     prisma.deletedCompanySlot.count({
       where: { ownerId: user.id, deletedAt: { gte: monthStart } },
     }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { freeTrialUsedAt: true } }),
   ]);
+  // One free trial per owner (by email/account). The first company gets it;
+  // later companies are created locked (FREE) and must buy the ₹499 trial or Pro.
+  const freeTrialAvailable = !dbUser?.freeTrialUsedAt;
   const limit = companyLimitForOwner(owned.map((c) => c.planTier));
   if (owned.length + deletedThisMonth >= limit) {
     return NextResponse.json(
@@ -157,15 +161,19 @@ export async function POST(request: Request) {
         }
 
         send({ step: "saving" });
-        // Every new company starts a 2-day free trial: full Pro-level access, the
-        // worker's scheduler lapses it via trialEndsAt, then billing takes over.
+        // First company for this owner → free FREE_TRIAL_DAYS of full access,
+        // provisioning starts immediately. Once the free trial is used, later
+        // companies are created locked (FREE, no provisioning): the founder
+        // buys the ₹499 trial or Pro to switch them on.
         const company = await prisma.company.create({
           data: {
             ownerId: user.id,
-            planTier: "TRIAL",
-            status: "PROVISIONING",
-            taskCyclesPerDay: PLANS.TRIAL.taskCyclesPerDay,
-            trialEndsAt: new Date(Date.now() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000),
+            planTier: freeTrialAvailable ? "TRIAL" : "FREE",
+            status: freeTrialAvailable ? "PROVISIONING" : "DRAFT",
+            taskCyclesPerDay: freeTrialAvailable ? PLANS.TRIAL.taskCyclesPerDay : 0,
+            trialEndsAt: freeTrialAvailable
+              ? new Date(Date.now() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000)
+              : null,
             name: foundation.companyName,
             slug: slugify(foundation.companyName),
             location,
@@ -189,13 +197,28 @@ export async function POST(request: Request) {
           select: { id: true, slug: true },
         });
 
-        await grantWelcomeCredits(company.id);
-        await logActivity({
-          companyId: company.id,
-          agent: "FINANCE",
-          action: `Your ${FREE_TRIAL_DAYS}-day free trial has started — everything is unlocked`,
-          isPublic: false,
-        });
+        if (freeTrialAvailable) {
+          // Burn the once-per-owner free trial. Guarded so two concurrent
+          // creates can't both grant it.
+          await prisma.user.updateMany({
+            where: { id: user.id, freeTrialUsedAt: null },
+            data: { freeTrialUsedAt: new Date() },
+          });
+          await grantWelcomeCredits(company.id);
+          await logActivity({
+            companyId: company.id,
+            agent: "FINANCE",
+            action: `Your ${FREE_TRIAL_DAYS}-day free trial has started — everything is unlocked`,
+            isPublic: false,
+          });
+        } else {
+          await logActivity({
+            companyId: company.id,
+            agent: "FINANCE",
+            action: "Company created — start the ₹499 7-day trial or Pro to switch on your agents",
+            isPublic: false,
+          });
+        }
         await logActivity({
           companyId: company.id,
           agent: "ORCHESTRATOR",
