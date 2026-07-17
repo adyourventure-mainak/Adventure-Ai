@@ -49,9 +49,17 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold">Admin</h1>
-        <p className="mt-1 text-sm text-ink-400">Platform overview — {user.email}</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Admin</h1>
+          <p className="mt-1 text-sm text-ink-400">Platform overview — {user.email}</p>
+        </div>
+        <Link
+          href="/admin/invoices"
+          className="rounded-lg border border-ink-800 px-3 py-1.5 text-sm text-ink-400 hover:text-white"
+        >
+          Invoice register →
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
