@@ -40,30 +40,46 @@ type Target = {
   href: string;
   /** Whether the network actually accepts a prefilled caption over a URL. */
   prefills: boolean;
+  /** Extra context for the paste-ready hint (e.g. X's length limit). */
+  note?: string;
   className: string;
 };
 
+// X (Twitter) post character limit — captions above this can't fit one tweet.
+const X_LIMIT = 280;
+
 /**
- * Where a post can be taken to be published. Only X and LinkedIn accept a
- * prefilled caption via URL; Instagram has no web composer intent at all and
- * Facebook ignores prefilled text, so for those we put the caption on the
- * clipboard and open the company's own page to paste into.
+ * Where a post can be taken to be published, per real platform behaviour:
+ *  - X: the tweet intent genuinely prefills the caption, BUT only up to 280
+ *    chars, so a long caption arrives over-limit and must be trimmed.
+ *  - LinkedIn: text prefill via URL was removed by LinkedIn — the composer
+ *    opens empty. So we copy the caption and open the share box to paste.
+ *  - Instagram / Facebook: no usable web-composer prefill either.
+ * In every case we ALSO copy the full caption to the clipboard on click, so the
+ * complete message is one paste away even when a platform truncates or ignores
+ * the prefill.
  */
 function targetsFor(item: InboxDeliverable, socials: CompanySocials): Target[] {
-  const text = encodeURIComponent(caption(item));
+  const cap = caption(item);
+  const text = encodeURIComponent(cap);
+  const tooLongForX = cap.length > X_LIMIT;
   const all: Target[] = [
     {
       key: "twitter",
       label: "Post on X",
       href: `https://twitter.com/intent/tweet?text=${text}`,
       prefills: true,
+      note: tooLongForX
+        ? `This caption is ${cap.length} characters — over X's ${X_LIMIT} limit, so X will flag it. The full text is on your clipboard; trim it in the composer or paste a shorter version.`
+        : undefined,
       className: "bg-white text-black",
     },
     {
       key: "linkedin",
       label: "Post on LinkedIn",
-      href: `https://www.linkedin.com/feed/?shareActive=true&text=${text}`,
-      prefills: true,
+      // LinkedIn ignores prefilled text via URL — open the share box empty.
+      href: "https://www.linkedin.com/feed/?shareActive=true",
+      prefills: false,
       className: "bg-[#0A66C2] text-white",
     },
     {
@@ -116,13 +132,14 @@ export function InboxItem({
     setTimeout(() => setCopied(false), 1500);
   }
 
-  // Networks that can't take a prefilled caption still shouldn't mean retyping
-  // it — put it on the clipboard on the way out, so the tab opens paste-ready.
+  // Always copy the full caption on the way out — that way the complete message
+  // is one paste away whether the platform prefills (X, but it may truncate at
+  // 280) or doesn't (LinkedIn/Instagram/Facebook ignore prefilled text).
   async function openTarget(t: Target) {
-    if (!t.prefills) {
-      await navigator.clipboard.writeText(caption(item)).catch(() => {});
-      setPasteReady(t.label);
-      setTimeout(() => setPasteReady(null), 6000);
+    await navigator.clipboard.writeText(caption(item)).catch(() => {});
+    if (!t.prefills || t.note) {
+      setPasteReady(t.note ?? `${t.label} won't prefill posts — caption copied, just paste it in.`);
+      setTimeout(() => setPasteReady(null), 8000);
     }
     window.open(t.href, "_blank", "noopener,noreferrer");
   }
@@ -212,9 +229,9 @@ export function InboxItem({
               onClick={() => openTarget(t)}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold hover:opacity-90 ${t.className}`}
               title={
-                t.prefills
-                  ? "Opens the composer with your caption filled in — you press post"
-                  : "Copies your caption and opens your page — paste it in and attach the image"
+                t.key === "twitter"
+                  ? "Opens X with your caption filled in (trim if over 280 chars) — the full text is also copied"
+                  : "Caption is copied to your clipboard — paste it into the composer that opens, and attach the image"
               }
             >
               {t.label} ↗
@@ -238,9 +255,8 @@ export function InboxItem({
       </div>
       {pasteReady && (
         <p className="mt-3 rounded-lg border border-brand-500/30 bg-brand-500/10 px-3 py-2 text-xs text-brand-400">
-          Caption copied — paste it into {pasteReady}
-          {item.imageUrl ? ", and attach the image you downloaded" : ""}. {pasteReady} doesn&apos;t
-          let apps prefill a post, so this last step is yours.
+          {pasteReady}
+          {item.imageUrl ? " Don't forget to attach the image you downloaded." : ""}
         </p>
       )}
       {askNote && (
