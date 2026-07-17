@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { HeaderAuthNav } from "@/components/header-auth-nav";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -14,10 +14,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <nav className="flex items-center gap-6 text-sm text-ink-100">
             <Link href="/#pricing" className="hover:text-white">Pricing</Link>
             <Link href="/#faq" className="hover:text-white">FAQ</Link>
-            <Link href="/login" className="hover:text-white">Sign in</Link>
-            <Link href="/login">
-              <Button size="sm">Start free</Button>
-            </Link>
+            <HeaderAuthNav />
           </nav>
         </div>
       </header>
