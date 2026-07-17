@@ -6,6 +6,15 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
 const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/c/", "/admin"];
 
 export async function middleware(request: NextRequest) {
+  // One canonical host. Auth cookies (incl. the PKCE code verifier) are
+  // host-only: a login started on adventure-ai.in cannot complete on
+  // www.adventure-ai.in. Fold www onto the apex before anything else.
+  if (request.nextUrl.hostname === "www.adventure-ai.in") {
+    const url = request.nextUrl.clone();
+    url.hostname = "adventure-ai.in";
+    return NextResponse.redirect(url, 308);
+  }
+
   // Rescue net: if Supabase's redirect allowlist rejects our callback URL it
   // falls back to the Site URL and delivers the PKCE code to the HOMEPAGE
   // (e.g. https://www.adventure-ai.in/?code=...). Nothing there exchanges it,
