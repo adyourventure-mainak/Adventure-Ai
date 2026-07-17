@@ -44,5 +44,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)"],
+  // Exclude auth/callback: it exchanges the OAuth/magic-link code and sets the
+  // session cookies itself — running getUser() here can rotate them mid-flight
+  // and force a second login.
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/webhooks|auth/callback).*)"],
 };
