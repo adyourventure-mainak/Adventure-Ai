@@ -19,7 +19,6 @@ export async function GET(request: Request) {
   const next = url.searchParams.get("next") ?? "/dashboard";
 
   const fail = () => NextResponse.redirect(new URL("/login?error=auth", url.origin));
-  if (!code) return fail();
 
   // The response we'll return — the code-exchange writes Set-Cookie onto THIS.
   const response = NextResponse.redirect(new URL(next, url.origin));
@@ -44,6 +43,16 @@ export async function GET(request: Request) {
       },
     },
   );
+
+  // No code at all — Supabase redirected with an error (e.g. a replayed flow:
+  // error_code=flow_state_already_used). If an earlier pass already set a
+  // session, the user IS logged in; send them on instead of showing an error.
+  if (!code) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user ? response : fail();
+  }
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button, Card, Input } from "@/components/ui";
 
@@ -18,7 +18,21 @@ function LoginForm() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [oauthStarted, setOauthStarted] = useState(false);
+  const router = useRouter();
   const next = useSearchParams().get("next") ?? "/dashboard";
+
+  // Already signed in? Straight to the app. This also rescues replayed OAuth
+  // flows (flow_state_already_used): the first pass logged the user in, the
+  // stale retry errored — but the session exists, so there's nothing to fix.
+  useEffect(() => {
+    supabaseBrowser()
+      .auth.getSession()
+      .then(({ data }) => {
+        if (data.session) router.replace(next);
+      })
+      .catch(() => {});
+  }, [next, router]);
 
   const redirectTo = () =>
     `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
@@ -37,6 +51,10 @@ function LoginForm() {
   }
 
   async function signInWithGoogle() {
+    // Double-clicking starts two OAuth flows; the second invalidates the
+    // first's state at Supabase → "flow_state_already_used". Start one only.
+    if (oauthStarted) return;
+    setOauthStarted(true);
     setError(null);
     const { error } = await supabaseBrowser().auth.signInWithOAuth({
       provider: "google",
@@ -47,7 +65,10 @@ function LoginForm() {
         queryParams: { prompt: "select_account" },
       },
     });
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      setOauthStarted(false);
+    }
   }
 
   return (
@@ -81,8 +102,8 @@ function LoginForm() {
             <div className="my-4 flex items-center gap-3 text-xs text-ink-400">
               <div className="h-px flex-1 bg-ink-800" /> or <div className="h-px flex-1 bg-ink-800" />
             </div>
-            <Button variant="outline" className="w-full" onClick={signInWithGoogle}>
-              Continue with Google
+            <Button variant="outline" className="w-full" disabled={oauthStarted} onClick={signInWithGoogle}>
+              {oauthStarted ? "Redirecting to Google…" : "Continue with Google"}
             </Button>
           </>
         )}
