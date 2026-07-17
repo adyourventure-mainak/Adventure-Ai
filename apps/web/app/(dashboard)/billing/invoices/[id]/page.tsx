@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 export default async function InvoicePage({ params }: { params: { id: string } }) {
   const user = await requireUser();
   const inv = await prisma.invoice.findUnique({ where: { id: params.id } });
-  if (!inv || inv.userId !== user.id) notFound();
+  // Owner sees their own invoices; admins can open any (invoice register).
+  if (!inv || (inv.userId !== user.id && !user.isAdmin)) notFound();
 
   const intra = inv.cgstP > 0 || inv.sgstP > 0;
 

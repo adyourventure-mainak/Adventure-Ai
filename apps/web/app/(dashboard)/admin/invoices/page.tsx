@@ -111,12 +111,13 @@ export default async function AdminInvoicesPage({
               <th className="px-4 py-3 text-right">IGST</th>
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3">Payment ref</th>
+              <th className="px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {invoices.length === 0 && (
               <tr>
-                <td colSpan={11} className="px-4 py-6 text-center text-ink-400">
+                <td colSpan={12} className="px-4 py-6 text-center text-ink-400">
                   No invoices yet — they are issued automatically on payment completion.
                 </td>
               </tr>
@@ -139,6 +140,14 @@ export default async function AdminInvoicesPage({
                 <td className="px-4 py-3 text-right font-medium">{formatINR(inv.totalP)}</td>
                 <td className="px-4 py-3 font-mono text-xs text-ink-400">
                   {inv.razorpayPaymentId ?? "—"}
+                </td>
+                <td className="px-4 py-3">
+                  <Link
+                    href={`/billing/invoices/${inv.id}`}
+                    className="whitespace-nowrap text-brand-400 hover:underline"
+                  >
+                    Download ⬇
+                  </Link>
                 </td>
               </tr>
             ))}
