@@ -202,7 +202,7 @@ model Company {
   reviews Json?   // top 3 extracted reviews: [{ author, rating, text }]
 
   // Trial
-  trialEndsAt DateTime? // set on TRIAL activation (now + 15 days)
+  trialEndsAt DateTime? // 3-day free trial, or 7-day paid trial from activation
 
   // Generated at onboarding
   ideaSummary String? @db.Text

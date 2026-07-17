@@ -32,6 +32,7 @@ export default function BillingPage() {
     companyStatus: string;
     subscriptionStatus: string | null;
     currentPeriodEnd: string | null;
+    trialExpired?: boolean;
   } | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [couponInput, setCouponInput] = useState("");
@@ -249,7 +250,7 @@ export default function BillingPage() {
         )}
       </Card>
 
-      {status && status.planTier !== "FREE" && status.companyStatus !== "LAPSED" && (
+      {status && status.planTier !== "FREE" && status.companyStatus !== "LAPSED" && !status.trialExpired && (
         <Card className="mt-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -275,12 +276,16 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {status && (status.planTier === "FREE" || (status.planTier === "TRIAL" && status.companyStatus === "LAPSED")) && (
+      {status && (status.planTier === "FREE" || status.trialExpired || (status.planTier === "TRIAL" && status.companyStatus === "LAPSED")) && (
         <Card className="mt-8 border-brand-500">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold">Limited trial</h2>
+                <h2 className="text-xl font-semibold">
+                  {status.trialExpired || status.companyStatus === "LAPSED"
+                    ? "Your trial has ended — choose how to continue"
+                    : "Limited trial"}
+                </h2>
                 <Badge>{TRIAL_DAYS} days</Badge>
               </div>
               <p className="mt-1 text-sm text-ink-400">

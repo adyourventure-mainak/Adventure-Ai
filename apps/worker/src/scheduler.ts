@@ -19,7 +19,8 @@ import { sendLifecycleEmails } from "./emails";
 export function startScheduler(queues: Record<AgentQueueName, Queue>) {
   const tick = async () => {
     try {
-      // 0. Lapse expired trials (Company.trialEndsAt = activation + 15 days).
+      // 0. Lapse expired trials (Company.trialEndsAt = 3-day free trial, or the
+      // 7-day paid trial from activation).
       // LAPSED starts the same 90-day retention window as a cancellation.
       {
         const expired = await prisma.company.findMany({
