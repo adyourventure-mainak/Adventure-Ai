@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const gstin = parsed.data.billingGstin?.trim().toUpperCase() || null;
   if (gstin && !gstinStateCode(gstin)) {
     return NextResponse.json(
-      { error: "That GSTIN doesn't look valid (15 chars, e.g. 19CTUPS7673A1ZW). Leave blank if you don't have one." },
+      { error: "That GSTIN doesn't look valid (15 chars, e.g. 22AAAAA0000A1Z5). Leave blank if you don't have one." },
       { status: 400 },
     );
   }

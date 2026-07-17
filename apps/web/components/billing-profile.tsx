@@ -70,7 +70,7 @@ export function BillingProfileForm({ initial }: { initial: BillingProfile }) {
             className="mt-1 uppercase"
             value={f.billingGstin}
             onChange={(e) => setF({ ...f, billingGstin: e.target.value })}
-            placeholder="19CTUPS7673A1ZW"
+            placeholder="22AAAAA0000A1Z5"
             maxLength={15}
           />
         </label>
