@@ -6,6 +6,16 @@ type CookieToSet = { name: string; value: string; options?: CookieOptions };
 const PROTECTED_PREFIXES = ["/dashboard", "/onboarding", "/c/", "/admin"];
 
 export async function middleware(request: NextRequest) {
+  // Rescue net: if Supabase's redirect allowlist rejects our callback URL it
+  // falls back to the Site URL and delivers the PKCE code to the HOMEPAGE
+  // (e.g. https://www.adventure-ai.in/?code=...). Nothing there exchanges it,
+  // so the login silently dies. Route any ?code= landing on / to the callback.
+  if (request.nextUrl.pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
