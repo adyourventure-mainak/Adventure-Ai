@@ -46,6 +46,16 @@ export async function GET(request: Request) {
   );
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return fail();
+  if (error) {
+    // "flow_state_already_used" & friends: the code was already exchanged by a
+    // duplicate hit on this route (browser prefetch, double navigation, email
+    // scanner). The FIRST exchange set valid session cookies — so if a session
+    // exists, the user is logged in; continue instead of bouncing to /login.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) return response;
+    return fail();
+  }
   return response;
 }
