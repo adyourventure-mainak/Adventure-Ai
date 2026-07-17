@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { Prisma, prisma, grantCredits, grantWelcomeCredits, recordRedemption } from "@adventure/db";
-import { PLANS, REVENUE_SHARE_PERCENT, TRIAL_DAYS } from "@adventure/core";
+import { Prisma, prisma, grantCredits, grantWelcomeCredits, recordRedemption, issueInvoice } from "@adventure/db";
+import { PLANS, REVENUE_SHARE_PERCENT, TRIAL_DAYS, GST_PERCENT } from "@adventure/core";
 import * as razorpay from "@adventure/core/razorpay";
 
 // Razorpay webhook receiver. Signature-verified, idempotent via the
@@ -95,6 +95,29 @@ async function handleEvent(event: {
         }),
       ]);
       await grantWelcomeCredits(record.companyId); // no-op on renewals
+
+      // Invoice this charge. Subscription plan amount is GST-inclusive, so back
+      // out the taxable base. Uses the payment entity (present on charged) for
+      // idempotency; skips if this event carries no payment.
+      const subPayment = event.payload.payment?.entity as
+        | { id: string; amount: number }
+        | undefined;
+      if (subPayment?.amount) {
+        const owner = await prisma.company.findUnique({
+          where: { id: record.companyId },
+          select: { ownerId: true, name: true },
+        });
+        if (owner) {
+          const taxableP = Math.round((subPayment.amount * 100) / (100 + GST_PERCENT));
+          await issueInvoice({
+            userId: owner.ownerId,
+            companyId: record.companyId,
+            description: `${plan.name} plan (monthly) — ${owner.name}`,
+            taxableP,
+            razorpayPaymentId: subPayment.id,
+          }).catch((err) => console.error("[webhook] subscription invoice failed:", err));
+        }
+      }
       break;
     }
 
@@ -161,6 +184,7 @@ async function handleEvent(event: {
           );
         }
         await redeemIfCoupon(payment.notes, "CREDITS");
+        await issueInvoiceFor(payment, `${credits} credit${credits === 1 ? "" : "s"}`);
         return;
       }
 
@@ -189,6 +213,7 @@ async function handleEvent(event: {
         ]);
         await grantWelcomeCredits(payment.notes.companyId);
         await redeemIfCoupon(payment.notes, "TRIAL");
+        await issueInvoiceFor(payment, `${TRIAL_DAYS}-day trial (Pro access)`);
         return;
       }
 
@@ -216,6 +241,37 @@ async function handleEvent(event: {
 
     default:
       break;
+  }
+}
+
+/**
+ * Issue a GST invoice for a captured one-time payment (credit pack / trial).
+ * The taxable base rides on the order notes (notes.baseP), so the invoice
+ * matches the charge to the paise. Best-effort — the payment already
+ * succeeded, and issueInvoice is idempotent on the payment id.
+ */
+async function issueInvoiceFor(
+  payment: { id: string; notes?: Record<string, string> },
+  descriptionSuffix: string,
+): Promise<void> {
+  const notes = payment.notes;
+  const taxableP = notes?.baseP ? parseInt(notes.baseP, 10) : 0;
+  if (!notes?.companyId || !Number.isFinite(taxableP) || taxableP <= 0) return;
+  try {
+    const company = await prisma.company.findUnique({
+      where: { id: notes.companyId },
+      select: { ownerId: true, name: true },
+    });
+    if (!company) return;
+    await issueInvoice({
+      userId: company.ownerId,
+      companyId: notes.companyId,
+      description: `${descriptionSuffix} — ${company.name}`,
+      taxableP,
+      razorpayPaymentId: payment.id,
+    });
+  } catch (err) {
+    console.error("[webhook] invoice issue failed:", err);
   }
 }
 

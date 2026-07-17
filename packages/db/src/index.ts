@@ -1,6 +1,7 @@
 export { prisma, forCompany, Prisma, type TenantClient } from "./client";
 export * from "./credits";
 export * from "./coupons";
+export * from "./invoices";
 export type {
   User,
   Company,

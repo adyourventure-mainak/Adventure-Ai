@@ -97,6 +97,7 @@ export async function POST(request: Request) {
     notes: {
       type: "trial",
       companyId: company.id,
+      baseP: String(base), // taxable (post-discount, pre-GST) — for the invoice
       ...(couponId ? { couponId } : {}),
     },
   });

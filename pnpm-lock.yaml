@@ -150,6 +150,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@adventure/core':
+        specifier: workspace:*
+        version: link:../core
       '@prisma/client':
         specifier: ^5.19.0
         version: 5.22.0(prisma@5.22.0)

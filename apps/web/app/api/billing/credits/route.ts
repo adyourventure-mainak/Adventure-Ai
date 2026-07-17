@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       type: "credit_pack",
       companyId: company.id,
       credits: String(pack.credits),
+      baseP: String(base), // taxable (post-discount, pre-GST) — for the invoice
       ...(couponId ? { couponId } : {}),
     },
   });

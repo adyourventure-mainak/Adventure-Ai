@@ -17,12 +17,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
             Adventure <span className="text-brand-500">AI</span>
           </Link>
           <div className="flex items-center gap-4 text-sm">
+            <Link href="/dashboard" className="text-ink-400 hover:text-white">
+              Companies
+            </Link>
+            <Link href="/billing" className="text-ink-400 hover:text-white">
+              Billing
+            </Link>
             {user.isAdmin && (
               <Link href="/admin" className="text-ink-400 hover:text-white">
                 Admin
               </Link>
             )}
-            <span className="text-ink-400">{user.email}</span>
+            <span className="hidden text-ink-400 sm:inline">{user.email}</span>
             <form action="/auth/signout" method="post">
               <Button variant="ghost" size="sm">Sign out</Button>
             </form>

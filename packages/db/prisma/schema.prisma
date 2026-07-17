@@ -159,6 +159,14 @@ model User {
   deletedAt DateTime? // account deletion requested — worker finishes teardown
   freeTrialUsedAt DateTime? // set the first time this owner is granted a free trial; gates it to once
 
+  // GST billing profile — used to issue tax invoices on payment.
+  billingName     String? // legal / company name for the invoice
+  billingGstin    String? // customer GSTIN (optional; drives CGST+SGST vs IGST)
+  billingAddress  String? @db.Text
+  shippingAddress String? @db.Text
+
+  invoices Invoice[]
+
   companies Company[]
   audits    BusinessAudit[]
 
@@ -587,4 +595,46 @@ model CouponRedemption {
 
   @@index([couponId])
   @@map("coupon_redemptions")
+}
+
+/// GST tax invoice, issued on payment completion. Buyer + seller details are
+/// snapshotted so a later profile edit never rewrites a past invoice.
+model Invoice {
+  id            String   @id @default(cuid())
+  number        String   @unique // ADVAI-ONLINE/2026-27/001
+  financialYear String
+  seq           Int
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id])
+  companyId     String?  // the company the purchase was for (null if account-level)
+  description   String   // "Pro plan — Acme", "10 credits — Acme", etc.
+  sacCode       String   @default("9983")
+
+  // Buyer snapshot at time of issue
+  buyerName            String?
+  buyerGstin           String?
+  buyerBillingAddress  String? @db.Text
+  buyerShippingAddress String? @db.Text
+
+  // Amounts (paise)
+  taxableP Int
+  cgstP    Int @default(0)
+  sgstP    Int @default(0)
+  igstP    Int @default(0)
+  totalP   Int
+
+  razorpayPaymentId String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("invoices")
+}
+
+/// Monotonic per-financial-year invoice sequence. One row per FY; lastSeq is
+/// incremented atomically when an invoice is issued.
+model InvoiceCounter {
+  financialYear String @id
+  lastSeq       Int    @default(0)
+
+  @@map("invoice_counters")
 }

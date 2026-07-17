@@ -13,6 +13,7 @@
     "db:push": "prisma db push"
   },
   "dependencies": {
+    "@adventure/core": "workspace:*",
     "@prisma/client": "^5.19.0"
   },
   "devDependencies": {
