@@ -18,6 +18,34 @@ export const SocialDraftSchema = z.object({
 });
 export type SocialDraft = z.infer<typeof SocialDraftSchema> & { imageUrl?: string };
 
+// X/Twitter caps a post at 280 chars; we target 270 to leave headroom.
+const X_LIMIT = 270;
+
+/** The post as it's rendered for sharing: body, then a blank line + hashtags. */
+function renderCaption(text: string, hashtags: string[]): string {
+  return `${text}${hashtags.length ? "\n\n" + hashtags.map((h) => `#${h}`).join(" ") : ""}`;
+}
+
+/**
+ * Guarantee an X/Twitter post fits 270 chars including hashtags, even if the
+ * model overshoots the prompt. Drops hashtags first (keeps the message), then
+ * trims the body on a word boundary as a last resort. No-op for other platforms.
+ */
+function fitForX(draft: SocialDraft): SocialDraft {
+  if (draft.platform !== "twitter") return draft;
+  let text = draft.text.trim();
+  let hashtags = [...draft.hashtags];
+  while (hashtags.length && renderCaption(text, hashtags).length > X_LIMIT) {
+    hashtags = hashtags.slice(0, -1);
+  }
+  if (renderCaption(text, hashtags).length > X_LIMIT) {
+    const tagLen = hashtags.length ? renderCaption("", hashtags).length : 0;
+    const room = Math.max(0, X_LIMIT - tagLen - 1); // -1 for the ellipsis
+    text = text.slice(0, room).replace(/\s+\S*$/, "").trim() + "…";
+  }
+  return { ...draft, text, hashtags };
+}
+
 /**
  * Social agent — drafts posts from the orchestrator's topic (or a user
  * request). Publishing is gated by company autonomy: FULL_AUTO ships
@@ -60,7 +88,9 @@ Brand voice: ${company.brandVoice}
 
 Write one social post that earns attention without hype. Hook in the first
 line, one idea per post, end with a reason to visit the site. No emoji walls,
-no engagement bait.${preferredPlatform ? ` Target platform: ${preferredPlatform}.` : ""}${profiles.length ? `\nThe company's connected profiles (prefer these platforms):\n${profiles.join("\n")}` : ""}
+no engagement bait.${preferredPlatform ? ` Target platform: ${preferredPlatform}.` : ""}
+If the platform is twitter (X), the ENTIRE post — body plus all hashtags
+together — must be under 270 characters. Be punchy and cut ruthlessly to fit.${profiles.length ? `\nThe company's connected profiles (prefer these platforms):\n${profiles.join("\n")}` : ""}
 
 Relevant memory:
 ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
@@ -76,7 +106,8 @@ ${memories.map((m) => `- [${m.agent}] ${m.content}`).join("\n") || "(none)"}`,
 
   // Generate the accompanying image when requested; a failed/unconfigured
   // image pipeline degrades to a caption-only post rather than failing.
-  const draft: SocialDraft = { ...parsedDraft };
+  // fitForX guarantees an X post fits 270 chars even if the model overshot.
+  const draft: SocialDraft = fitForX({ ...parsedDraft });
   if (payload?.withImage) {
     if (imageStorageConfigured()) {
       try {
