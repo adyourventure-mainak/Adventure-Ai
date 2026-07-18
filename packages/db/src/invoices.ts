@@ -30,6 +30,7 @@ export async function issueInvoice(input: {
     select: {
       billingName: true,
       billingGstin: true,
+      billingPhone: true,
       billingAddress: true,
       shippingAddress: true,
     },
@@ -58,6 +59,7 @@ export async function issueInvoice(input: {
       description: input.description,
       buyerName: buyer?.billingName ?? null,
       buyerGstin: buyer?.billingGstin ?? null,
+      buyerPhone: buyer?.billingPhone ?? null,
       buyerBillingAddress: buyer?.billingAddress ?? null,
       buyerShippingAddress: buyer?.shippingAddress ?? null,
       taxableP: tax.taxableP,

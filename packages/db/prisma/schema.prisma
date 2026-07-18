@@ -162,6 +162,7 @@ model User {
   // GST billing profile — used to issue tax invoices on payment.
   billingName     String? // legal / company name for the invoice
   billingGstin    String? // customer GSTIN (optional; drives CGST+SGST vs IGST)
+  billingPhone    String? // contact number (required by the form; nullable for pre-existing rows)
   billingAddress  String? @db.Text
   shippingAddress String? @db.Text
 
@@ -613,6 +614,7 @@ model Invoice {
   // Buyer snapshot at time of issue
   buyerName            String?
   buyerGstin           String?
+  buyerPhone           String?
   buyerBillingAddress  String? @db.Text
   buyerShippingAddress String? @db.Text
 

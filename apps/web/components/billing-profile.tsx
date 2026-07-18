@@ -7,6 +7,7 @@ import { Button, Input, Textarea } from "@/components/ui";
 export interface BillingProfile {
   billingName: string | null;
   billingGstin: string | null;
+  billingPhone: string | null;
   billingAddress: string | null;
   shippingAddress: string | null;
 }
@@ -16,6 +17,7 @@ export function BillingProfileForm({ initial }: { initial: BillingProfile }) {
   const [f, setF] = useState({
     billingName: initial.billingName ?? "",
     billingGstin: initial.billingGstin ?? "",
+    billingPhone: initial.billingPhone ?? "",
     billingAddress: initial.billingAddress ?? "",
     shippingAddress: initial.shippingAddress ?? "",
   });
@@ -26,6 +28,10 @@ export function BillingProfileForm({ initial }: { initial: BillingProfile }) {
   );
 
   async function save() {
+    if (!f.billingPhone.trim()) {
+      setError("Contact number is required — include the country code, e.g. +91 98765 43210.");
+      return;
+    }
     setState("saving");
     setError(null);
     const payload = {
@@ -75,6 +81,17 @@ export function BillingProfileForm({ initial }: { initial: BillingProfile }) {
           />
         </label>
       </div>
+      <label className="block text-sm">
+        <span className="text-ink-100">Contact number</span>
+        <Input
+          type="tel"
+          required
+          className="mt-1"
+          value={f.billingPhone}
+          onChange={(e) => setF({ ...f, billingPhone: e.target.value })}
+          placeholder="+91 98765 43210"
+        />
+      </label>
       <label className="block text-sm">
         <span className="text-ink-100">Billing address</span>
         <Textarea

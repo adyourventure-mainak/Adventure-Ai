@@ -46,6 +46,7 @@ export default async function InvoicePage({ params }: { params: { id: string } }
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">Bill to</p>
             <p className="mt-1 text-sm font-medium">{inv.buyerName || user.email}</p>
             {inv.buyerGstin && <p className="text-xs text-ink-600">GSTIN: {inv.buyerGstin}</p>}
+            {inv.buyerPhone && <p className="text-xs text-ink-600">Contact: {inv.buyerPhone}</p>}
             {inv.buyerBillingAddress && (
               <p className="mt-1 whitespace-pre-wrap text-xs text-ink-600">{inv.buyerBillingAddress}</p>
             )}

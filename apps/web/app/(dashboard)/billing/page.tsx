@@ -13,7 +13,7 @@ export default async function BillingHomePage() {
   const [profile, invoices, companies] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
-      select: { billingName: true, billingGstin: true, billingAddress: true, shippingAddress: true },
+      select: { billingName: true, billingGstin: true, billingPhone: true, billingAddress: true, shippingAddress: true },
     }),
     prisma.invoice.findMany({
       where: { userId: user.id },
@@ -124,6 +124,7 @@ export default async function BillingHomePage() {
             initial={{
               billingName: profile?.billingName ?? null,
               billingGstin: profile?.billingGstin ?? null,
+              billingPhone: profile?.billingPhone ?? null,
               billingAddress: profile?.billingAddress ?? null,
               shippingAddress: profile?.shippingAddress ?? null,
             }}
