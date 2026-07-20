@@ -83,6 +83,30 @@ export async function deployProject(params: {
   });
 }
 
+// Company sites live on subdomains of the platform domain
+// (<slug>.adventure-ai.in). The domain's DNS is on Vercel nameservers, so
+// attaching the subdomain to a project auto-creates the record + SSL.
+export const SITE_DOMAIN = process.env.COMPANY_SITE_DOMAIN ?? "adventure-ai.in";
+
+/**
+ * Attach <slug>.SITE_DOMAIN to a project. Idempotent: 409 (already attached
+ * to this or another project we own) is treated as success only when it's
+ * already on THIS project; other conflicts surface as errors.
+ */
+export async function addProjectDomain(projectIdOrName: string, domain: string): Promise<void> {
+  try {
+    await vc(`/v10/projects/${projectIdOrName}/domains`, {
+      method: "POST",
+      body: JSON.stringify({ name: domain }),
+    });
+  } catch (err) {
+    // "domain_already_in_use" on the same project → fine.
+    if (String(err).includes("already in use by one of your projects")) return;
+    if (String(err).includes("(409)")) return;
+    throw err;
+  }
+}
+
 /**
  * Create a project linked to a GitHub repo; Vercel then deploys on every push.
  * Idempotent: if the project name is taken (409) — e.g. a previous provisioning

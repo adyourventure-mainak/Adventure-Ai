@@ -93,7 +93,17 @@ export async function provisionCompany(companyId: string): Promise<void> {
       await record(companyId, "VERCEL_PROJECT", { status: "FAILED", error: "GitHub repo unavailable — cannot link project" });
     } else {
       try {
-        const { project, url } = await vercel.createProject({ name: company.slug, repoFullName });
+        const { project, url: fallbackUrl } = await vercel.createProject({ name: company.slug, repoFullName });
+        // Branded subdomain: <slug>.adventure-ai.in (DNS + SSL auto via
+        // Vercel nameservers). Fall back to .vercel.app if attaching fails.
+        let url = fallbackUrl;
+        try {
+          const customDomain = `${company.slug}.${vercel.SITE_DOMAIN}`;
+          await vercel.addProjectDomain(project.id, customDomain);
+          url = `https://${customDomain}`;
+        } catch (domainErr) {
+          await logActivity({ companyId, agent: "ENGINEER", action: `Custom domain could not be attached (using ${fallbackUrl}): ${String(domainErr).slice(0, 200)}` });
+        }
         // Linking alone does not deploy — trigger the first production build
         // explicitly, or the .vercel.app domain 404s (DEPLOYMENT_NOT_FOUND).
         try {
